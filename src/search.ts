@@ -31,6 +31,9 @@ export class SearchSection {
 
 	private inputEl!: HTMLInputElement;
 	private resultsEl!: HTMLElement;
+	/** The whole search section (bar + results + filters) — used to decide when
+	 * a click counts as "outside" and should close the dropdown. */
+	private rootEl: HTMLElement | null = null;
 	private rows: { el: HTMLElement; open: () => void }[] = [];
 	private selected = -1;
 
@@ -58,19 +61,24 @@ export class SearchSection {
 		this.inputEl.addEventListener("focus", () => this.update());
 		this.inputEl.addEventListener("keydown", (e) => this.onKeyDown(e));
 
-		// Close the dropdown when clicking outside the search section.
-		this.view.registerDomEvent(document, "click", (e) => {
-			if (!parent.contains(e.target as Node)) this.hide();
-		});
-
 		return bar;
 	}
 
-	/** Renders the results dropdown container + the filter chip row. */
+	/** Renders the results dropdown container + the filter chip row. The
+	 * `parent` here wraps the whole search section (bar included), so it is used
+	 * as the boundary for the click-outside handler. */
 	renderResultsAndFilters(parent: HTMLElement): void {
+		this.rootEl = parent;
 		this.resultsEl = parent.createDiv("hearth-search-results");
 		this.resultsEl.hide();
 		this.renderFilters(parent);
+
+		// Close the dropdown when clicking outside the whole search section.
+		// Registered here (not in renderBar) so clicks on the filter chips —
+		// which live below the bar — count as inside and don't dismiss results.
+		this.view.registerDomEvent(document, "click", (e) => {
+			if (!parent.contains(e.target as Node)) this.hide();
+		});
 	}
 
 	// ---- Filters --------------------------------------------------------
