@@ -8,6 +8,7 @@ import {
 	applyCardPosition,
 	enableDragResize,
 	ensureLayout,
+	GridLayout,
 	GRID_GAP,
 	ROW_HEIGHT,
 } from "./grid";
@@ -47,8 +48,16 @@ export function renderDashboard(
 
 	const commit = () => void view.plugin.saveData(s);
 
+	// Shared layout state lets the drag engine push neighbouring cards aside.
+	const gridLayout: GridLayout = {
+		cards: s.cards,
+		elements: new Map(),
+		columns: s.gridColumns,
+	};
+
 	for (const card of s.cards) {
 		const el = grid.createDiv("hearth-card");
+		gridLayout.elements.set(card, el);
 		applyCardPosition(el, card, s.gridColumns);
 
 		if (card.accent) {
@@ -69,7 +78,7 @@ export function renderDashboard(
 		renderCardBody(view, card, body, component);
 
 		if (view.arrangeMode) {
-			enableDragResize(view, el, grid, card, s.gridColumns, component, commit);
+			enableDragResize(view, el, grid, card, gridLayout, component, commit);
 		}
 	}
 }
