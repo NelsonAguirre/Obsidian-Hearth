@@ -1,13 +1,23 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { App, Menu, PluginSettingTab, Setting } from "obsidian";
 import type HearthPlugin from "./main";
 import { FILE_TYPE_GROUPS } from "./filetypes";
-import { BackgroundKind, CardKind, DashboardCard } from "./types";
+import { BackgroundKind, CardKind, DashboardCard, LinkItem } from "./types";
+import { CARD_TEMPLATES, cardFromTemplate } from "./templates";
 
 const CARD_KIND_LABELS: Record<CardKind, string> = {
 	embed: "Embed (note / image / base)",
 	bookmarks: "Bookmarks",
 	favorites: "Favorites",
 	text: "Text / jot-down",
+	recent: "Recent files",
+	links: "Links / launchpad",
+	clock: "Clock & greeting",
+};
+
+const LINK_TYPE_LABELS: Record<LinkItem["type"], string> = {
+	note: "Note",
+	url: "URL",
+	command: "Command",
 };
 
 const BACKGROUND_LABELS: Record<BackgroundKind, string> = {
@@ -273,22 +283,30 @@ export class HomeSettingTab extends PluginSettingTab {
 
 		s.cards.forEach((card, index) => this.cardRow(containerEl, card, index));
 
-		new Setting(containerEl).addButton((b) =>
-			b
-				.setButtonText("Add card")
-				.setCta()
-				.onClick(async () => {
-					s.cards.push({
-						id: `card-${Date.now().toString(36)}`,
-						kind: "text",
-						title: "New card",
-						w: 4,
-						h: 2,
-					});
-					await this.save();
-					this.display();
-				}),
-		);
+		new Setting(containerEl)
+			.setName("Add a card")
+			.setDesc("Pick a card from the library.")
+			.addButton((b) =>
+				b
+					.setButtonText("Add card")
+					.setCta()
+					.onClick((evt) => {
+						const menu = new Menu();
+						for (const template of CARD_TEMPLATES) {
+							menu.addItem((item) =>
+								item
+									.setTitle(template.name)
+									.setIcon(template.icon)
+									.onClick(async () => {
+										s.cards.push(cardFromTemplate(template));
+										await this.save();
+										this.display();
+									}),
+							);
+						}
+						menu.showAtMouseEvent(evt as MouseEvent);
+					}),
+			);
 	}
 
 	private cardRow(containerEl: HTMLElement, card: DashboardCard, index: number): void {
@@ -331,6 +349,20 @@ export class HomeSettingTab extends PluginSettingTab {
 			});
 		}
 
+		if (card.kind === "recent") {
+			setting.addText((t) => {
+				t.setPlaceholder("Count")
+					.setValue(String(card.count ?? 8))
+					.onChange(async (v) => {
+						const n = parseInt(v, 10);
+						card.count = Number.isNaN(n) ? undefined : n;
+						await this.save();
+					});
+				t.inputEl.type = "number";
+				t.inputEl.addClass("hearth-count-input");
+			});
+		}
+
 		setting.addExtraButton((b) =>
 			b
 				.setIcon("move-up")
@@ -352,6 +384,114 @@ export class HomeSettingTab extends PluginSettingTab {
 					await this.save();
 					this.display();
 				}),
+		);
+
+		this.colorsRow(containerEl, card);
+
+		if (card.kind === "links") this.linksEditor(containerEl, card);
+	}
+
+	private colorsRow(containerEl: HTMLElement, card: DashboardCard): void {
+		const row = new Setting(containerEl)
+			.setClass("hearth-color-setting")
+			.setName("Colors")
+			.setDesc("Accent and background tint for this card.");
+
+		row.addColorPicker((c) =>
+			c.setValue(card.accent ?? "#7c5cff").onChange(async (v) => {
+				card.accent = v;
+				await this.save();
+			}),
+		);
+		row.addExtraButton((b) =>
+			b
+				.setIcon("rotate-ccw")
+				.setTooltip("Clear accent")
+				.onClick(async () => {
+					card.accent = undefined;
+					await this.save();
+					this.display();
+				}),
+		);
+
+		row.addColorPicker((c) =>
+			c.setValue(card.background ?? "#000000").onChange(async (v) => {
+				card.background = v;
+				await this.save();
+			}),
+		);
+		row.addExtraButton((b) =>
+			b
+				.setIcon("rotate-ccw")
+				.setTooltip("Clear background")
+				.onClick(async () => {
+					card.background = undefined;
+					await this.save();
+					this.display();
+				}),
+		);
+	}
+
+	private linksEditor(containerEl: HTMLElement, card: DashboardCard): void {
+		const links = (card.links ??= []);
+
+		links.forEach((link, index) => {
+			const row = new Setting(containerEl).setClass("hearth-link-setting");
+			row.addText((t) =>
+				t.setPlaceholder("Label").setValue(link.label).onChange(async (v) => {
+					link.label = v;
+					await this.save();
+				}),
+			);
+			row.addText((t) =>
+				t.setPlaceholder("Icon").setValue(link.icon).onChange(async (v) => {
+					link.icon = v;
+					await this.save();
+				}),
+			);
+			row.addDropdown((d) => {
+				(Object.keys(LINK_TYPE_LABELS) as LinkItem["type"][]).forEach((k) =>
+					d.addOption(k, LINK_TYPE_LABELS[k]),
+				);
+				d.setValue(link.type).onChange(async (v) => {
+					link.type = v as LinkItem["type"];
+					await this.save();
+					this.display();
+				});
+			});
+			row.addText((t) => {
+				t.setPlaceholder("Target (path / URL / command id)")
+					.setValue(link.target)
+					.onChange(async (v) => {
+						link.target = v;
+						await this.save();
+					});
+				if (link.type === "note") t.inputEl.setAttribute("list", "hearth-file-list");
+			});
+			row.addExtraButton((b) =>
+				b
+					.setIcon("trash-2")
+					.setTooltip("Remove link")
+					.onClick(async () => {
+						links.splice(index, 1);
+						await this.save();
+						this.display();
+					}),
+			);
+		});
+
+		new Setting(containerEl).addButton((b) =>
+			b.setButtonText("Add link").onClick(async () => {
+				links.push({
+					id: `link-${Date.now().toString(36)}`,
+					label: "",
+					icon: "link",
+					target: "",
+					type: "note",
+				});
+				await this.save();
+				this.display();
+			}),
 		);
 	}
 
