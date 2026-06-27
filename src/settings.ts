@@ -1,7 +1,8 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { App, Menu, PluginSettingTab, Setting } from "obsidian";
 import type HearthPlugin from "./main";
 import { FILE_TYPE_GROUPS } from "./filetypes";
 import { BackgroundKind, CardKind, DashboardCard, LinkItem } from "./types";
+import { CARD_TEMPLATES, cardFromTemplate } from "./templates";
 
 const CARD_KIND_LABELS: Record<CardKind, string> = {
 	embed: "Embed (note / image / base)",
@@ -282,25 +283,30 @@ export class HomeSettingTab extends PluginSettingTab {
 
 		s.cards.forEach((card, index) => this.cardRow(containerEl, card, index));
 
-		new Setting(containerEl).addButton((b) =>
-			b
-				.setButtonText("Add card")
-				.setCta()
-				.onClick(async () => {
-					s.cards.push({
-						id: `card-${Date.now().toString(36)}`,
-						kind: "text",
-						title: "New card",
-						// x/y are -1 so ensureLayout() packs it into the next free slot.
-						x: -1,
-						y: -1,
-						w: 4,
-						h: 2,
-					});
-					await this.save();
-					this.display();
-				}),
-		);
+		new Setting(containerEl)
+			.setName("Add a card")
+			.setDesc("Pick a card from the library.")
+			.addButton((b) =>
+				b
+					.setButtonText("Add card")
+					.setCta()
+					.onClick((evt) => {
+						const menu = new Menu();
+						for (const template of CARD_TEMPLATES) {
+							menu.addItem((item) =>
+								item
+									.setTitle(template.name)
+									.setIcon(template.icon)
+									.onClick(async () => {
+										s.cards.push(cardFromTemplate(template));
+										await this.save();
+										this.display();
+									}),
+							);
+						}
+						menu.showAtMouseEvent(evt as MouseEvent);
+					}),
+			);
 	}
 
 	private cardRow(containerEl: HTMLElement, card: DashboardCard, index: number): void {
