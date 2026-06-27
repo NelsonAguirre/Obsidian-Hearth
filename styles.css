@@ -423,6 +423,81 @@
 	line-height: 1.5;
 }
 
+/* Links / launchpad */
+.hearth-links {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+	gap: 10px;
+}
+
+.hearth-link-tile {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 14px 8px;
+	border-radius: 12px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+	cursor: pointer;
+	text-align: center;
+	transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+}
+
+.hearth-link-tile:hover {
+	border-color: var(--interactive-accent);
+	background: var(--background-modifier-hover);
+	transform: translateY(-1px);
+}
+
+.hearth-link-icon {
+	display: flex;
+	color: var(--text-muted);
+}
+
+.hearth-link-icon .svg-icon {
+	width: 22px;
+	height: 22px;
+}
+
+.hearth-link-label {
+	font-size: 0.8rem;
+	color: var(--text-normal);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 100%;
+}
+
+/* Clock / greeting */
+.hearth-clock {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 2px;
+}
+
+.hearth-clock-greeting {
+	font-size: 0.85rem;
+	color: var(--text-muted);
+}
+
+.hearth-clock-time {
+	font-size: clamp(1.8rem, 6vw, 2.6rem);
+	font-weight: 700;
+	letter-spacing: -0.01em;
+	color: var(--text-normal);
+	line-height: 1.1;
+}
+
+.hearth-clock-date {
+	font-size: 0.85rem;
+	color: var(--text-muted);
+}
+
 /* ---- Toolbar -------------------------------------------------------- */
 
 .hearth-toolbar {
@@ -543,8 +618,13 @@
 
 /* ---- Settings ------------------------------------------------------- */
 
-.hearth-card-setting .setting-item-control {
+.hearth-card-setting .setting-item-control,
+.hearth-link-setting .setting-item-control {
 	flex-wrap: wrap;
 	justify-content: flex-end;
 	gap: 6px;
+}
+
+.hearth-count-input {
+	width: 64px;
 }

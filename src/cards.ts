@@ -7,7 +7,7 @@ import {
 } from "obsidian";
 import type { HomeView } from "./view";
 import type { BookmarkItem } from "./obsidian-ext";
-import { DashboardCard } from "./types";
+import { DashboardCard, LinkItem } from "./types";
 import { iconForFile } from "./filetypes";
 
 /** Render a card's body based on its kind. */
@@ -29,6 +29,15 @@ export function renderCardBody(
 			break;
 		case "text":
 			renderText(view, card, body);
+			break;
+		case "recent":
+			renderRecent(view, card, body);
+			break;
+		case "links":
+			renderLinks(view, card, body);
+			break;
+		case "clock":
+			renderClock(view, body, component);
 			break;
 	}
 }
@@ -170,4 +179,98 @@ function renderText(view: HomeView, card: DashboardCard, body: HTMLElement): voi
 		true,
 	);
 	area.addEventListener("input", save);
+}
+
+// ---- Recent files -------------------------------------------------------
+
+function renderRecent(view: HomeView, card: DashboardCard, body: HTMLElement): void {
+	const count = card.count && card.count > 0 ? card.count : 8;
+	const files = view.app.workspace
+		.getLastOpenFiles()
+		.map((p) => view.app.vault.getAbstractFileByPath(p))
+		.filter((f): f is TFile => f instanceof TFile)
+		.slice(0, count);
+
+	if (files.length === 0) {
+		emptyState(body, "history", "No recent files");
+		return;
+	}
+
+	const list = body.createDiv("hearth-list");
+	for (const file of files) {
+		const row = list.createDiv("hearth-list-item");
+		setIcon(row.createDiv("hearth-list-icon"), iconForFile(file));
+		row.createDiv({ cls: "hearth-list-label", text: file.basename });
+		row.addEventListener("click", () =>
+			view.app.workspace.getLeaf(true).openFile(file),
+		);
+	}
+}
+
+// ---- Links / launchpad --------------------------------------------------
+
+function renderLinks(view: HomeView, card: DashboardCard, body: HTMLElement): void {
+	const links = card.links ?? [];
+	if (links.length === 0) {
+		emptyState(body, "layout-grid", "Add links in settings");
+		return;
+	}
+
+	const grid = body.createDiv("hearth-links");
+	for (const link of links) {
+		const tile = grid.createDiv("hearth-link-tile");
+		setIcon(tile.createDiv("hearth-link-icon"), link.icon || "link");
+		tile.createDiv({ cls: "hearth-link-label", text: link.label || link.target });
+		tile.addEventListener("click", () => openLink(view, link));
+	}
+}
+
+function openLink(view: HomeView, link: LinkItem): void {
+	switch (link.type) {
+		case "url":
+			if (link.target) window.open(link.target, "_blank");
+			break;
+		case "command":
+			if (link.target) view.app.commands.executeCommandById(link.target);
+			break;
+		case "note": {
+			const file = view.app.vault.getAbstractFileByPath(link.target);
+			if (file instanceof TFile) view.app.workspace.getLeaf(true).openFile(file);
+			else if (link.target) view.app.workspace.openLinkText(link.target, "", true);
+			break;
+		}
+	}
+}
+
+// ---- Clock / greeting ---------------------------------------------------
+
+function renderClock(view: HomeView, body: HTMLElement, component: Component): void {
+	const wrap = body.createDiv("hearth-clock");
+	const greetingEl = wrap.createDiv("hearth-clock-greeting");
+	const timeEl = wrap.createDiv("hearth-clock-time");
+	const dateEl = wrap.createDiv("hearth-clock-date");
+
+	const update = () => {
+		const now = new Date();
+		const hour = now.getHours();
+		const greeting =
+			hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+		greetingEl.setText(greeting);
+		timeEl.setText(
+			now.toLocaleTimeString(undefined, {
+				hour: "2-digit",
+				minute: "2-digit",
+			}),
+		);
+		dateEl.setText(
+			now.toLocaleDateString(undefined, {
+				weekday: "long",
+				day: "numeric",
+				month: "long",
+			}),
+		);
+	};
+
+	update();
+	component.registerInterval(window.setInterval(update, 1000));
 }

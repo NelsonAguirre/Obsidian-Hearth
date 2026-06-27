@@ -1,5 +1,12 @@
 /** The kind of content a dashboard card renders. */
-export type CardKind = "embed" | "bookmarks" | "favorites" | "text";
+export type CardKind =
+	| "embed"
+	| "bookmarks"
+	| "favorites"
+	| "text"
+	| "recent"
+	| "links"
+	| "clock";
 
 /** A single tile inside a "links" (launchpad) card. */
 export interface LinkItem {
