@@ -1,0 +1,42 @@
+name: Release Obsidian plugin
+
+on:
+  push:
+    tags:
+      # Run only for version tags that match the manifest version, e.g. 0.1.0
+      - "[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+
+      - name: Install & build
+        run: |
+          npm install
+          npm run build
+
+      - name: Verify build output
+        run: test -f main.js && test -f manifest.json && test -f styles.css
+
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          # Assets must be attached as individual files (not zipped) so that
+          # BRAT can fetch manifest.json, main.js and styles.css directly.
+          gh release create "$tag" \
+            --title="$tag" \
+            --generate-notes \
+            main.js manifest.json styles.css
