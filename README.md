@@ -1,6 +1,6 @@
 # Hearth
 
-![[assets/banner.png]]
+![assets/banner.png](assets/banner.png)
 
 A beautiful, customizable **home screen for Obsidian** — search, dashboard, and
 launcher in one. Hearth gives your vault a welcoming front page: a big search
@@ -20,15 +20,19 @@ embed notes, images, bases, bookmarks and quick text.
      assets/screenshots/ with a real screenshot (PNG/JPG is fine — just keep
      the filename, or update the links here). -->
 
-| Dashboard | Search & filters |
-| --- | --- |
-| ![Dashboard](assets/screenshots/dashboard.svg) | ![Search & filters](assets/screenshots/search.svg) |
+![Dashboard](assets/dashboardfull.png)
 
-| Arrange mode | Multiple dashboards |
-| --- | --- |
-| ![Arrange mode](assets/screenshots/arrange.svg) | ![Multiple dashboards](assets/screenshots/dashboards.svg) |
 
-<img src="assets/screenshots/mobile.svg" alt="Mobile mode" width="280" />
+![Simple](assets/dashboardsimple.png)
+
+
+![Empty](assets/dashboardempty.png)
+
+
+![Switch](assets/dashboardswitch.png)
+
+
+<img src="assets/mobiledashboard.png" alt="Mobile mode" width="280" />
 
 ## Features
 
