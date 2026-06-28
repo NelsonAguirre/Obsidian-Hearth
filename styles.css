@@ -390,6 +390,22 @@
 	opacity: 0.6;
 }
 
+/* Daily-note card: the "create today's note" prompt button. */
+.hearth-daily-create {
+	margin-top: 10px;
+	padding: 6px 14px;
+	border-radius: 8px;
+	border: 1px solid var(--interactive-accent);
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	cursor: pointer;
+	font-size: 0.85rem;
+}
+
+.hearth-daily-create:hover {
+	opacity: 0.9;
+}
+
 /* Web / iframe embeds fill the whole card body. */
 .hearth-card-body.hearth-web-body {
 	padding: 0;
@@ -493,7 +509,23 @@
 	text-overflow: ellipsis;
 }
 
-/* Text / jot-down */
+/* Text / jot-down: a rendered Markdown preview that swaps to a textarea on
+ * double-click (so links in the preview stay clickable). */
+.hearth-jot {
+	height: 100%;
+}
+
+.hearth-jot-preview {
+	height: 100%;
+	overflow: auto;
+	cursor: text;
+}
+
+.hearth-jot-preview.is-empty {
+	color: var(--text-faint);
+	font-style: italic;
+}
+
 .hearth-text {
 	width: 100%;
 	height: 100%;
@@ -737,6 +769,20 @@
 
 .hearth-view.hearth-mobile-only .hearth-inner {
 	gap: 20px;
+}
+
+/* ---- Empty board (no cards): centre the search like a launcher ------ */
+
+.hearth-view.hearth-empty-board .hearth-scroll {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+/* Don't let the "No cards yet" placeholder stretch and push the search off
+ * centre — let it size to its content under the centred search. */
+.hearth-view.hearth-empty-board .hearth-grid-empty {
+	height: auto;
 }
 
 /* Pinned cards (shown on every dashboard): mark them while arranging so it's

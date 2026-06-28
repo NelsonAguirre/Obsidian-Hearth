@@ -7,7 +7,7 @@ launcher in one. Hearth gives your vault a welcoming front page: a big search
 field, quick file-type filters, a new-note button, and a grid of cards that
 embed notes, images, bases, bookmarks and quick text.
 
-> Status: **v0.8** — the top section and a fully arrangeable card dashboard
+> Status: **v0.9** — the top section and a fully arrangeable card dashboard
 > (drag, resize, collision-aware packing, on-board card management, templates,
 > per-card colors, web embeds, live auto-refreshing, zoomable and editable
 > embeds, Excalidraw and canvas cards, multiple switchable dashboards with
@@ -15,10 +15,6 @@ embed notes, images, bases, bookmarks and quick text.
 > import/export) are in. See [Roadmap](#roadmap) for what's next.
 
 ## Screenshots
-
-<!-- Placeholders below render as SVGs. Replace each file under
-     assets/screenshots/ with a real screenshot (PNG/JPG is fine — just keep
-     the filename, or update the links here). -->
 
 ![Dashboard](assets/dashboardfull.png)
 
@@ -58,6 +54,9 @@ embed notes, images, bases, bookmarks and quick text.
 - **Excalidraw & canvas cards** — dedicated templates for embedding an
   Excalidraw drawing or a `.canvas` file, with a friendly prompt when the
   required plugin isn't enabled.
+- **Daily note** — always shows *today's* daily note (resolved from the core
+  Daily notes plugin's date format and folder), with a one-click prompt to
+  create it when it doesn't exist yet. Optionally editable in place.
 - **Web page** — embed any `http(s)` URL in a sandboxed iframe.
 - **Live content** — embed and web cards can auto-refresh on an interval, so a
   card tracking a frequently-edited note or a live page stays up to date.
@@ -68,7 +67,8 @@ embed notes, images, bases, bookmarks and quick text.
 - **Commands** — tiles that run any command-palette command, with an adjustable
   **button size**.
 - **Clock & greeting** — a live time-of-day greeting, clock and date.
-- **Text / jot-down** — a quick scratch field saved with the card.
+- **Text / jot-down** — a quick scratch field saved with the card, rendered as
+  **Markdown** (double-click to edit).
 
 ### Multiple dashboards
 - **Switcher** — a `[1] [2] [+]` row in the top-left switches between boards and
@@ -186,6 +186,8 @@ into `<vault>/.obsidian/plugins/hearth/`.
 - [x] **Granular row height** — a Row height setting for finer control over how
   tall cards can be
 - [x] **Command tile size** — adjustable button size on the commands card
+- [x] **Daily note card** — always embeds today's daily note, with a prompt to
+  create it when missing
 ### Planned
 
 Bigger ideas

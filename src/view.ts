@@ -4,6 +4,7 @@ import { renderHeader } from "./header";
 import { renderDashboard } from "./dashboard";
 import { renderDashboardSwitcher } from "./dashboards";
 import { applyBackground } from "./background";
+import { renderCards } from "./types";
 import { HEARTH_ICON_ID } from "./icon";
 
 export const VIEW_TYPE_HOME = "hearth-home-view";
@@ -97,6 +98,14 @@ export class HomeView extends ItemView {
 		// Mobile-only mode: on a phone/tablet, collapse to just the search field.
 		const mobileOnly = Platform.isMobile && this.plugin.settings.mobileSearchOnly;
 		root.toggleClass("hearth-mobile-only", mobileOnly);
+
+		// With no cards to show (and not arranging), centre the search field
+		// vertically so the page reads as a clean launcher.
+		const emptyBoard =
+			!mobileOnly &&
+			!this.arrangeMode &&
+			renderCards(this.plugin.settings).length === 0;
+		root.toggleClass("hearth-empty-board", emptyBoard);
 
 		applyBackground(this, root);
 
