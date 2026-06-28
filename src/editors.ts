@@ -141,6 +141,15 @@ export class CardSettingsModal extends Modal {
 								this.opts.save();
 							}),
 					);
+				new Setting(containerEl)
+					.setName("Editable")
+					.setDesc("Edit the embedded note's text in place (Markdown notes only).")
+					.addToggle((t) =>
+						t.setValue(card.editable ?? false).onChange((v) => {
+							card.editable = v || undefined;
+							this.opts.save();
+						}),
+					);
 				this.refreshSetting(containerEl);
 				break;
 			}

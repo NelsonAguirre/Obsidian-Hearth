@@ -77,6 +77,10 @@ export interface DashboardCard {
 	 * Omitted means no scaling. */
 	scale?: number;
 
+	/** kind === "embed": edit the embedded note's text in place instead of
+	 * rendering it read-only. Only applies to Markdown notes. */
+	editable?: boolean;
+
 	// ---- Appearance ----
 	/** Optional accent color (CSS color) for the card header/border. */
 	accent?: string;
