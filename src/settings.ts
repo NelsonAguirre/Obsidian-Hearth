@@ -388,6 +388,32 @@ export class HomeSettingTab extends PluginSettingTab {
 			});
 		}
 
+		setting.addText((t) => {
+			t.setValue(String(card.w))
+				.onChange(async (v) => {
+					const n = parseInt(v, 10);
+					if (Number.isNaN(n)) return;
+					card.w = Math.max(1, Math.min(n, s.gridColumns));
+					await this.save();
+				});
+			t.inputEl.type = "number";
+			t.inputEl.addClass("hearth-count-input");
+			t.inputEl.setAttribute("aria-label", "Width in columns");
+		});
+
+		setting.addText((t) => {
+			t.setValue(String(card.h))
+				.onChange(async (v) => {
+					const n = parseInt(v, 10);
+					if (Number.isNaN(n)) return;
+					card.h = Math.max(1, n);
+					await this.save();
+				});
+			t.inputEl.type = "number";
+			t.inputEl.addClass("hearth-count-input");
+			t.inputEl.setAttribute("aria-label", "Height in rows");
+		});
+
 		setting.addExtraButton((b) =>
 			b
 				.setIcon("move-up")
