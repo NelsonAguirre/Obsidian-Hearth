@@ -30,7 +30,7 @@ export const FILE_TYPE_GROUPS: FileTypeGroup[] = [
 	{ id: "audio", label: "Audio", icon: "music", extensions: ["mp3", "wav", "flac", "ogg", "m4a", "aac", "3gp"] },
 	{ id: "pdf", label: "PDF", icon: "file-type", extensions: ["pdf"] },
 	{ id: "documents", label: "Documents", icon: "file-text", extensions: ["doc", "docx", "odt", "rtf", "txt", "pages"] },
-	{ id: "spreadsheets", label: "Sheets", icon: "file-spreadsheet", extensions: ["xls", "xlsx", "ods", "csv", "tsv", "numbers"] },
+	{ id: "spreadsheets", label: "Sheets", icon: "file-spreadsheet", extensions: ["xls", "xlsx", "ods", "csv", "tsv", "numbers", "usheet"] },
 	{ id: "presentations", label: "Slides", icon: "presentation", extensions: ["ppt", "pptx", "odp", "key"] },
 	// Catch-all for any file not matched by a more specific group above.
 	{ id: OTHER_GROUP_ID, label: "Other", icon: "file", extensions: [] },

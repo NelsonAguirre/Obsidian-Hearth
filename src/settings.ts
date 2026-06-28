@@ -272,6 +272,16 @@ export class HomeSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
+			.setName("Compact spacing")
+			.setDesc("Tighten card padding and top margin to enlarge the usable area.")
+			.addToggle((t) =>
+				t.setValue(s.compact).onChange(async (v) => {
+					s.compact = v;
+					await this.save();
+				}),
+			);
+
+		new Setting(containerEl)
 			.setName("Grid columns")
 			.addSlider((sl) =>
 				sl

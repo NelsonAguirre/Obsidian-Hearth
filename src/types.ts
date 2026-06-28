@@ -74,6 +74,10 @@ export interface HomeSettings {
 	openOnStartup: boolean;
 	replaceNewTabs: boolean;
 
+	// ---- Appearance (layout density) ----
+	/** Tighten card and top-of-page spacing to enlarge the usable area. */
+	compact: boolean;
+
 	// ---- Search filters ----
 	/** Group ids the user has hidden from the auto-detected filter row. */
 	hiddenFilters: string[];
@@ -105,6 +109,8 @@ export const DEFAULT_SETTINGS: HomeSettings = {
 
 	openOnStartup: true,
 	replaceNewTabs: true,
+
+	compact: false,
 
 	hiddenFilters: [],
 

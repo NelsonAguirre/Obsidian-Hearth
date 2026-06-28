@@ -388,6 +388,13 @@
 	flex-shrink: 0;
 }
 
+.hearth-list-icon .hearth-favicon {
+	width: 16px;
+	height: 16px;
+	object-fit: contain;
+	border-radius: 3px;
+}
+
 .hearth-list-label {
 	font-size: 0.9rem;
 	color: var(--text-normal);
@@ -713,4 +720,30 @@
 
 .hearth-count-input {
 	width: 64px;
+}
+
+/* ---- Compact spacing ----------------------------------------------- */
+
+.hearth-compact .hearth-scroll {
+	padding: 1.5vh 14px 24px;
+}
+
+.hearth-compact .hearth-inner {
+	gap: 16px;
+}
+
+.hearth-compact .hearth-header {
+	gap: 10px;
+}
+
+.hearth-compact .hearth-title {
+	margin-top: 0;
+}
+
+.hearth-compact .hearth-card-head {
+	padding: 6px 10px;
+}
+
+.hearth-compact .hearth-card-body {
+	padding: 8px 10px;
 }
