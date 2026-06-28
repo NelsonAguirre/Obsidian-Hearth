@@ -379,7 +379,10 @@ function renderCommands(view: HomeView, card: DashboardCard, body: HTMLElement):
 		return;
 	}
 
-	const grid = body.createDiv("hearth-links");
+	const grid = body.createDiv("hearth-links hearth-commands-grid");
+	if (card.tileSize && card.tileSize > 0) {
+		grid.style.setProperty("--hearth-tile", `${card.tileSize}px`);
+	}
 	for (const cmd of commands) {
 		const tile = grid.createDiv("hearth-link-tile");
 		setIcon(tile.createDiv("hearth-link-icon"), cmd.icon || "terminal-square");

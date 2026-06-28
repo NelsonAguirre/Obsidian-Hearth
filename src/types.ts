@@ -81,6 +81,14 @@ export interface DashboardCard {
 	 * rendering it read-only. Only applies to Markdown notes. */
 	editable?: boolean;
 
+	/** kind === "commands": pixel size of the command tiles (min column width).
+	 * Omitted means the default tile size. */
+	tileSize?: number;
+
+	/** Show this card on every dashboard, sharing one definition and position
+	 * across boards ("synced"). Stored once in settings.pinnedCards. */
+	pinned?: boolean;
+
 	// ---- Appearance ----
 	/** Optional accent color (CSS color) for the card header/border. */
 	accent?: string;
@@ -94,16 +102,32 @@ export interface DashboardCard {
 	h: number;
 }
 
+/** Background mode for the home view. */
+export type BackgroundKind = "none" | "color" | "image" | "url";
+
+/** A self-contained background configuration (used for per-dashboard overrides
+ * as well as the global default). */
+export interface BackgroundConfig {
+	kind: BackgroundKind;
+	value: string;
+	opacity: number;
+	blur: number;
+}
+
 /** A named dashboard: one arrangeable board of cards. The vault can hold several
  * and switch between them from the top-left switcher. */
 export interface Dashboard {
 	id: string;
 	name: string;
+	/** Optional emoji/short text shown on the switcher button instead of its
+	 * 1-based number. */
+	icon?: string;
 	cards: DashboardCard[];
+	/** Optional overrides; when omitted the global setting is used. */
+	gridColumns?: number;
+	rowHeight?: number;
+	background?: BackgroundConfig;
 }
-
-/** Background mode for the home view. */
-export type BackgroundKind = "none" | "color" | "image" | "url";
 
 export interface HomeSettings {
 	// ---- Header ----
@@ -141,6 +165,8 @@ export interface HomeSettings {
 	dashboards: Dashboard[];
 	/** Id of the dashboard currently shown. */
 	activeDashboardId: string;
+	/** Cards pinned to every dashboard (rendered on top of each board's cards). */
+	pinnedCards: DashboardCard[];
 	gridColumns: number;
 	/** Height of one grid row in pixels. Lower = finer vertical sizing. */
 	rowHeight: number;
@@ -178,6 +204,7 @@ export const DEFAULT_SETTINGS: HomeSettings = {
 	// top-level `cards` array (upgrade). Left empty here so migration always runs.
 	dashboards: [],
 	activeDashboardId: "",
+	pinnedCards: [],
 	gridColumns: 12,
 	rowHeight: 92,
 	favorites: [],
@@ -207,9 +234,74 @@ export function activeDashboard(s: HomeSettings): Dashboard {
 	return s.dashboards.find((d) => d.id === s.activeDashboardId) ?? s.dashboards[0];
 }
 
-/** Cards of the currently selected dashboard. */
+/** Cards of the currently selected dashboard (its own cards only). */
 export function activeCards(s: HomeSettings): DashboardCard[] {
 	return activeDashboard(s).cards;
+}
+
+/** Cards to render on the active board: its own cards plus every pinned card. */
+export function renderCards(s: HomeSettings): DashboardCard[] {
+	return [...activeDashboard(s).cards, ...s.pinnedCards];
+}
+
+/** Effective grid columns for the active board (per-dashboard override or global). */
+export function effectiveColumns(s: HomeSettings): number {
+	return activeDashboard(s).gridColumns ?? s.gridColumns;
+}
+
+/** Effective row height for the active board (per-dashboard override or global). */
+export function effectiveRowHeight(s: HomeSettings): number {
+	return activeDashboard(s).rowHeight ?? s.rowHeight;
+}
+
+/** Remove a card from whichever list holds it (a board or the pinned set). */
+export function removeCard(s: HomeSettings, card: DashboardCard): void {
+	for (const d of s.dashboards) {
+		const i = d.cards.indexOf(card);
+		if (i >= 0) {
+			d.cards.splice(i, 1);
+			return;
+		}
+	}
+	const p = s.pinnedCards.indexOf(card);
+	if (p >= 0) s.pinnedCards.splice(p, 1);
+}
+
+/** Pin/unpin a card: move it between its board and the shared pinned set. */
+export function setCardPinned(s: HomeSettings, card: DashboardCard, pinned: boolean): void {
+	const alreadyPinned = s.pinnedCards.includes(card);
+	if (pinned === alreadyPinned) {
+		card.pinned = pinned;
+		return;
+	}
+	if (pinned) {
+		for (const d of s.dashboards) {
+			const i = d.cards.indexOf(card);
+			if (i >= 0) {
+				d.cards.splice(i, 1);
+				break;
+			}
+		}
+		card.pinned = true;
+		s.pinnedCards.push(card);
+	} else {
+		const i = s.pinnedCards.indexOf(card);
+		if (i >= 0) s.pinnedCards.splice(i, 1);
+		card.pinned = false;
+		activeDashboard(s).cards.push(card);
+	}
+}
+
+/** Effective background for the active board (per-dashboard override or global). */
+export function effectiveBackground(s: HomeSettings): BackgroundConfig {
+	return (
+		activeDashboard(s).background ?? {
+			kind: s.backgroundKind,
+			value: s.backgroundValue,
+			opacity: s.backgroundOpacity,
+			blur: s.backgroundBlur,
+		}
+	);
 }
 
 /**
@@ -228,6 +320,7 @@ export function migrateSettings(s: HomeSettings, raw: Record<string, unknown>): 
 		s.activeDashboardId = s.dashboards[0].id;
 	}
 	if (typeof s.rowHeight !== "number" || s.rowHeight <= 0) s.rowHeight = 92;
+	if (!Array.isArray(s.pinnedCards)) s.pinnedCards = [];
 	// Drop the obsolete single-board field so it can't shadow the dashboards.
 	delete (s as unknown as { cards?: unknown }).cards;
 }

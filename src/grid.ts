@@ -1,6 +1,6 @@
 import { Component } from "obsidian";
 import type { HomeView } from "./view";
-import { DashboardCard } from "./types";
+import { DashboardCard, effectiveRowHeight } from "./types";
 
 /** Grid metrics — kept in sync with styles.css via inline CSS variables. */
 export const ROW_HEIGHT = 92;
@@ -182,7 +182,7 @@ export function enableDragResize(
 	onCommit: () => void,
 ): void {
 	const columns = layout.columns;
-	const rowHeight = view.plugin.settings.rowHeight || ROW_HEIGHT;
+	const rowHeight = effectiveRowHeight(view.plugin.settings) || ROW_HEIGHT;
 	const overlay = cardEl.createDiv("hearth-card-overlay");
 	const handle = cardEl.createDiv("hearth-resize-handle");
 

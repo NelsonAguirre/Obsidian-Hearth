@@ -277,6 +277,7 @@ export class HomeSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Grid columns")
+			.setDesc("Default column count. Each dashboard can override it from its own settings.")
 			.addSlider((sl) =>
 				sl
 					.setLimits(4, 16, 1)
@@ -290,7 +291,7 @@ export class HomeSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Row height")
-			.setDesc("Height of one grid row in pixels. Lower values give finer control over card height.")
+			.setDesc("Default row height in pixels (lower = finer card sizing). Each dashboard can override it.")
 			.addSlider((sl) =>
 				sl
 					.setLimits(32, 160, 4)

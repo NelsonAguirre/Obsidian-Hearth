@@ -1,32 +1,26 @@
 import { App, Menu, Modal, Setting, setIcon } from "obsidian";
 import type { HomeView } from "./view";
-import { Dashboard, newDashboardId } from "./types";
+import { BackgroundConfig, BackgroundKind, Dashboard, newDashboardId } from "./types";
 
 /**
- * The top-left dashboard switcher: a numbered button per dashboard plus a "+"
- * to add one. Clicking a number switches to it; right-clicking opens a menu to
- * rename or delete it.
+ * The top-left dashboard switcher: a button per dashboard (its emoji/icon or its
+ * 1-based number) plus a "+" to add one. Clicking switches to it; right-clicking
+ * opens a menu to edit its settings or delete it.
  */
 export function renderDashboardSwitcher(view: HomeView, container: HTMLElement): void {
 	const s = view.plugin.settings;
 	const bar = container.createDiv("hearth-dash-switcher");
 
-	const switchTo = (id: string) => {
-		if (id === s.activeDashboardId) return;
-		s.activeDashboardId = id;
-		void view.plugin.saveData(s);
-		view.render();
-	};
-
 	s.dashboards.forEach((d, i) => {
+		const icon = d.icon?.trim();
 		const btn = bar.createEl("button", {
 			cls: "hearth-dash-btn",
-			text: String(i + 1),
+			text: icon || String(i + 1),
 		});
 		btn.toggleClass("is-active", d.id === s.activeDashboardId);
 		btn.setAttribute("aria-label", d.name);
 		btn.setAttribute("title", d.name);
-		btn.addEventListener("click", () => switchTo(d.id));
+		btn.addEventListener("click", () => view.plugin.setActiveDashboard(d.id));
 		btn.addEventListener("contextmenu", (e) => {
 			e.preventDefault();
 			showDashboardMenu(view, d, e);
@@ -51,22 +45,16 @@ export function renderDashboardSwitcher(view: HomeView, container: HTMLElement):
 	});
 }
 
-/** Context menu for a single dashboard button: rename and delete. */
+/** Context menu for a single dashboard button: settings and delete. */
 function showDashboardMenu(view: HomeView, dash: Dashboard, evt: MouseEvent): void {
 	const s = view.plugin.settings;
 	const menu = new Menu();
 
 	menu.addItem((item) =>
 		item
-			.setTitle("Rename")
-			.setIcon("pencil")
-			.onClick(() => {
-				new RenameDashboardModal(view.app, dash.name, (name) => {
-					dash.name = name;
-					void view.plugin.saveData(s);
-					view.render();
-				}).open();
-			}),
+			.setTitle("Dashboard settings…")
+			.setIcon("settings-2")
+			.onClick(() => new DashboardSettingsModal(view, dash).open()),
 	);
 
 	menu.addItem((item) =>
@@ -89,38 +77,194 @@ function showDashboardMenu(view: HomeView, dash: Dashboard, evt: MouseEvent): vo
 	menu.showAtMouseEvent(evt);
 }
 
-/** A tiny prompt for renaming a dashboard. */
-class RenameDashboardModal extends Modal {
-	private current: string;
-	private onSubmit: (name: string) => void;
+const BACKGROUND_OPTIONS: Record<string, string> = {
+	default: "Use global default",
+	none: "None",
+	color: "Solid color",
+	image: "Vault image",
+	url: "Image URL",
+};
 
-	constructor(app: App, current: string, onSubmit: (name: string) => void) {
-		super(app);
-		this.current = current;
-		this.onSubmit = onSubmit;
+/** Per-dashboard settings: name, switcher icon, and optional overrides for grid
+ * columns, row height and background. Overrides fall back to the global
+ * settings when left off. */
+class DashboardSettingsModal extends Modal {
+	private view: HomeView;
+	private dash: Dashboard;
+
+	constructor(view: HomeView, dash: Dashboard) {
+		super(view.app);
+		this.view = view;
+		this.dash = dash;
 	}
 
 	onOpen(): void {
-		this.titleEl.setText("Rename dashboard");
-		const input = this.contentEl.createEl("input", {
-			cls: "hearth-rename-input",
-			attr: { type: "text", spellcheck: "false" },
-		});
-		input.value = this.current;
-		input.focus();
-		input.select();
+		this.titleEl.setText("Dashboard settings");
+		this.render();
+	}
 
-		const submit = () => {
-			const name = input.value.trim();
-			if (name) this.onSubmit(name);
-			this.close();
-		};
-		input.addEventListener("keydown", (e) => {
-			if (e.key === "Enter") submit();
-		});
+	/** Persist and refresh the live view without closing the modal. */
+	private commit(): void {
+		void this.view.plugin.saveData(this.view.plugin.settings);
+		this.view.render();
+	}
 
-		new Setting(this.contentEl).addButton((b) =>
-			b.setButtonText("Save").setCta().onClick(submit),
+	private render(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+		const dash = this.dash;
+		const s = this.view.plugin.settings;
+
+		new Setting(contentEl).setName("Name").addText((t) =>
+			t.setValue(dash.name).onChange((v) => {
+				dash.name = v || "Dashboard";
+				this.commit();
+			}),
+		);
+
+		new Setting(contentEl)
+			.setName("Switcher icon")
+			.setDesc("An emoji or short text shown on the switcher button. Empty = number.")
+			.addText((t) =>
+				t.setValue(dash.icon ?? "").onChange((v) => {
+					dash.icon = v.trim() || undefined;
+					this.commit();
+				}),
+			);
+
+		this.overrideSlider(
+			contentEl,
+			"Grid columns",
+			dash.gridColumns,
+			s.gridColumns,
+			4,
+			16,
+			1,
+			(v) => {
+				dash.gridColumns = v;
+				this.commit();
+			},
+		);
+
+		this.overrideSlider(
+			contentEl,
+			"Row height",
+			dash.rowHeight,
+			s.rowHeight,
+			32,
+			160,
+			4,
+			(v) => {
+				dash.rowHeight = v;
+				this.commit();
+			},
+		);
+
+		this.backgroundSection(contentEl);
+
+		new Setting(contentEl).addButton((b) =>
+			b.setButtonText("Done").setCta().onClick(() => this.close()),
+		);
+	}
+
+	/** A labelled override: a toggle that, when on, reveals a slider. Off clears
+	 * the override (passing undefined) so the global default applies. */
+	private overrideSlider(
+		containerEl: HTMLElement,
+		name: string,
+		current: number | undefined,
+		fallback: number,
+		min: number,
+		max: number,
+		step: number,
+		set: (value: number | undefined) => void,
+	): void {
+		const overriding = typeof current === "number";
+		const row = new Setting(containerEl)
+			.setName(name)
+			.setDesc(overriding ? "Overriding the global default." : `Using global default (${fallback}).`)
+			.addToggle((t) =>
+				t.setValue(overriding).onChange((v) => {
+					set(v ? fallback : undefined);
+					this.render();
+				}),
+			);
+		if (overriding) {
+			row.addSlider((sl) =>
+				sl
+					.setLimits(min, max, step)
+					.setValue(current as number)
+					.setDynamicTooltip()
+					.onChange((v) => set(v)),
+			);
+		}
+	}
+
+	private backgroundSection(containerEl: HTMLElement): void {
+		const dash = this.dash;
+		const bg = dash.background;
+
+		new Setting(containerEl)
+			.setName("Background")
+			.setDesc("Override the global background for this dashboard.")
+			.addDropdown((d) => {
+				Object.entries(BACKGROUND_OPTIONS).forEach(([k, label]) => d.addOption(k, label));
+				d.setValue(bg ? bg.kind : "default").onChange((v) => {
+					if (v === "default") {
+						dash.background = undefined;
+					} else {
+						dash.background = {
+							kind: v as BackgroundKind,
+							value: bg?.value ?? "",
+							opacity: bg?.opacity ?? 0.15,
+							blur: bg?.blur ?? 0,
+						};
+					}
+					this.commit();
+					this.render();
+				});
+			});
+
+		if (!bg || bg.kind === "none") return;
+
+		const desc =
+			bg.kind === "color"
+				? "A CSS color, e.g. #1e1e2e."
+				: bg.kind === "image"
+					? "A vault image path, e.g. Attachments/bg.png."
+					: "A direct image URL.";
+		new Setting(containerEl)
+			.setName("Background value")
+			.setDesc(desc)
+			.addText((t) =>
+				t.setValue(bg.value).onChange((v) => {
+					bg.value = v;
+					this.commit();
+				}),
+			);
+
+		this.bgNumber(containerEl, "Opacity", bg, "opacity", 0, 1, 0.05);
+		this.bgNumber(containerEl, "Blur", bg, "blur", 0, 40, 1);
+	}
+
+	private bgNumber(
+		containerEl: HTMLElement,
+		name: string,
+		bg: BackgroundConfig,
+		key: "opacity" | "blur",
+		min: number,
+		max: number,
+		step: number,
+	): void {
+		new Setting(containerEl).setName(name).addSlider((sl) =>
+			sl
+				.setLimits(min, max, step)
+				.setValue(bg[key])
+				.setDynamicTooltip()
+				.onChange((v) => {
+					bg[key] = v;
+					this.commit();
+				}),
 		);
 	}
 
