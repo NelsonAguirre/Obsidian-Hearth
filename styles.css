@@ -771,6 +771,20 @@
 	gap: 20px;
 }
 
+/* ---- Empty board (no cards): centre the search like a launcher ------ */
+
+.hearth-view.hearth-empty-board .hearth-scroll {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+/* Don't let the "No cards yet" placeholder stretch and push the search off
+ * centre — let it size to its content under the centred search. */
+.hearth-view.hearth-empty-board .hearth-grid-empty {
+	height: auto;
+}
+
 /* Pinned cards (shown on every dashboard): mark them while arranging so it's
  * clear they're shared and will move on all boards at once. */
 .hearth-grid.is-arranging .hearth-card.is-pinned::after {
