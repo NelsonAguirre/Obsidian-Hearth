@@ -40,7 +40,7 @@ export function renderCardBody(
 			renderLinks(view, card, body);
 			break;
 		case "clock":
-			renderClock(view, body, component);
+			renderClock(view, card, body, component);
 			break;
 	}
 }
@@ -152,14 +152,38 @@ function renderBookmarks(view: HomeView, body: HTMLElement): void {
 			item.query ||
 			"Untitled";
 		const row = list.createDiv("hearth-list-item");
-		const icon =
-			item.type === "url" ? "globe" :
-			item.type === "folder" ? "folder" :
-			item.type === "search" ? "search" : "file-text";
-		setIcon(row.createDiv("hearth-list-icon"), icon);
+		const iconEl = row.createDiv("hearth-list-icon");
+		if (item.type === "url" && item.url) {
+			renderFavicon(iconEl, item.url);
+		} else {
+			const icon =
+				item.type === "folder" ? "folder" :
+				item.type === "search" ? "search" : "file-text";
+			setIcon(iconEl, icon);
+		}
 		row.createDiv({ cls: "hearth-list-label", text: label });
 		row.addEventListener("click", () => openBookmark(view, item));
 	}
+}
+
+/** Show a site favicon for a URL bookmark, falling back to the globe icon if the
+ * URL can't be parsed or the favicon fails to load (e.g. offline). */
+function renderFavicon(iconEl: HTMLElement, url: string): void {
+	let host: string;
+	try {
+		host = new URL(url).hostname;
+	} catch {
+		setIcon(iconEl, "globe");
+		return;
+	}
+	const img = iconEl.createEl("img", { cls: "hearth-favicon" });
+	img.setAttribute("loading", "lazy");
+	img.setAttribute("referrerpolicy", "no-referrer");
+	img.addEventListener("error", () => {
+		img.remove();
+		setIcon(iconEl, "globe");
+	});
+	img.src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`;
 }
 
 function openBookmark(view: HomeView, item: BookmarkItem): void {
@@ -283,31 +307,49 @@ function openLink(view: HomeView, link: LinkItem): void {
 
 // ---- Clock / greeting ---------------------------------------------------
 
-function renderClock(view: HomeView, body: HTMLElement, component: Component): void {
+function renderClock(
+	view: HomeView,
+	card: DashboardCard,
+	body: HTMLElement,
+	component: Component,
+): void {
+	const cfg = card.clock ?? {};
+	const showGreeting = cfg.showGreeting !== false;
+	const dateMode = cfg.dateMode ?? "full";
+
 	const wrap = body.createDiv("hearth-clock");
-	const greetingEl = wrap.createDiv("hearth-clock-greeting");
+	const greetingEl = showGreeting ? wrap.createDiv("hearth-clock-greeting") : null;
 	const timeEl = wrap.createDiv("hearth-clock-time");
-	const dateEl = wrap.createDiv("hearth-clock-date");
+	const dateEl = dateMode === "none" ? null : wrap.createDiv("hearth-clock-date");
+
+	const timeOpts: Intl.DateTimeFormatOptions = {
+		hour: "2-digit",
+		minute: "2-digit",
+	};
+	if (cfg.use24Hour) timeOpts.hour12 = false;
+	if (cfg.showSeconds) timeOpts.second = "2-digit";
 
 	const update = () => {
 		const now = new Date();
-		const hour = now.getHours();
-		const greeting =
-			hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-		greetingEl.setText(greeting);
-		timeEl.setText(
-			now.toLocaleTimeString(undefined, {
-				hour: "2-digit",
-				minute: "2-digit",
-			}),
-		);
-		dateEl.setText(
-			now.toLocaleDateString(undefined, {
-				weekday: "long",
-				day: "numeric",
-				month: "long",
-			}),
-		);
+		if (greetingEl) {
+			const hour = now.getHours();
+			const greeting =
+				cfg.greetingText?.trim() ||
+				(hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening");
+			greetingEl.setText(greeting);
+		}
+		timeEl.setText(now.toLocaleTimeString(undefined, timeOpts));
+		if (dateEl) {
+			dateEl.setText(
+				dateMode === "short"
+					? now.toLocaleDateString(undefined, { dateStyle: "short" })
+					: now.toLocaleDateString(undefined, {
+							weekday: "long",
+							day: "numeric",
+							month: "long",
+						}),
+			);
+		}
 	};
 
 	update();

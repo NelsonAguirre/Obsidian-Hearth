@@ -56,6 +56,7 @@ export class HomeView extends ItemView {
 		const root = this.contentEl;
 		root.empty();
 		root.addClass("hearth-view");
+		root.toggleClass("hearth-compact", this.plugin.settings.compact);
 
 		applyBackground(this, root);
 
