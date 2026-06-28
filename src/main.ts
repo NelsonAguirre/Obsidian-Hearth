@@ -1,6 +1,6 @@
 import { addIcon, Plugin, TFile, TFolder, WorkspaceLeaf, Notice } from "obsidian";
 import { HomeView, VIEW_TYPE_HOME } from "./view";
-import { DEFAULT_SETTINGS, HomeSettings } from "./types";
+import { DEFAULT_SETTINGS, HomeSettings, migrateSettings } from "./types";
 import { HomeSettingTab } from "./settings";
 import { HEARTH_ICON_ID, HEARTH_ICON_SVG } from "./icon";
 
@@ -86,7 +86,9 @@ export default class HearthPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const raw = ((await this.loadData()) ?? {}) as Record<string, unknown>;
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, raw);
+		migrateSettings(this.settings, raw);
 	}
 
 	async saveSettings() {

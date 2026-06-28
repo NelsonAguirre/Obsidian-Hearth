@@ -658,6 +658,72 @@
 	height: 15px;
 }
 
+/* ---- Dashboard switcher (top-left) ---------------------------------- */
+
+.hearth-dash-switcher {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-bottom: -16px;
+}
+
+.hearth-dash-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border-radius: 8px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-muted);
+	cursor: pointer;
+	font-size: 0.85rem;
+	line-height: 1;
+	transition: all 120ms ease;
+}
+
+.hearth-dash-btn:hover {
+	color: var(--text-normal);
+	border-color: var(--interactive-accent);
+}
+
+.hearth-dash-btn.is-active {
+	color: var(--text-on-accent);
+	background: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+}
+
+.hearth-dash-add {
+	opacity: 0.6;
+}
+
+.hearth-dash-add:hover {
+	opacity: 1;
+}
+
+.hearth-dash-add svg {
+	width: 15px;
+	height: 15px;
+}
+
+.hearth-rename-input {
+	width: 100%;
+}
+
+/* ---- Mobile-only mode (search-only launcher) ------------------------ */
+
+.hearth-view.hearth-mobile-only .hearth-scroll {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+.hearth-view.hearth-mobile-only .hearth-inner {
+	gap: 20px;
+}
+
 /* ---- Per-card colors ------------------------------------------------ */
 
 .hearth-card.has-accent {

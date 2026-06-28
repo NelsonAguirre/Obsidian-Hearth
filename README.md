@@ -5,10 +5,11 @@ launcher in one. Hearth gives your vault a welcoming front page: a big search
 field, quick file-type filters, a new-note button, and a grid of cards that
 embed notes, images, bases, bookmarks and quick text.
 
-> Status: **v0.6** — the top section and a fully arrangeable card dashboard
+> Status: **v0.7** — the top section and a fully arrangeable card dashboard
 > (drag, resize, collision-aware packing, on-board card management, templates,
 > per-card colors, web embeds, live auto-refreshing, zoomable and editable
-> embeds, an Excalidraw drawing card, layout import/export) are in. See
+> embeds, an Excalidraw drawing card, multiple switchable dashboards, a
+> search-only mobile mode, layout import/export) are in. See
 > [Roadmap](#roadmap) for what's next.
 
 ## Features
@@ -123,10 +124,17 @@ into `<vault>/.obsidian/plugins/hearth/`.
   Excalidraw drawing, with a prompt to install the plugin when it's missing
 - [x] **Canvas card** — dedicated card template for embedding a `.canvas` file,
   with a prompt to enable the core Canvas plugin when it's off
+- [x] **Multiple dashboards** — several switchable boards, managed from the
+  `[1] [2] [+]` switcher in the top-left (right-click a number to rename/delete)
+- [x] **Mobile mode** — an option to collapse to just the search field on phones
+  and tablets, leaving the dashboard for desktop
+- [x] **Granular row height** — a Row height setting for finer control over how
+  tall cards can be
 ### Planned
 
 Bigger ideas
-- [ ] Multiple dashboards / switchable pages
+- [ ] Per-dashboard grid settings (columns / row height / background)
+- [ ] Reorder dashboards in the switcher (drag the number buttons)
 
 ## License
 MIT © ondreu

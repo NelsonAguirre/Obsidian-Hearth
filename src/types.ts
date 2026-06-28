@@ -94,6 +94,14 @@ export interface DashboardCard {
 	h: number;
 }
 
+/** A named dashboard: one arrangeable board of cards. The vault can hold several
+ * and switch between them from the top-left switcher. */
+export interface Dashboard {
+	id: string;
+	name: string;
+	cards: DashboardCard[];
+}
+
 /** Background mode for the home view. */
 export type BackgroundKind = "none" | "color" | "image" | "url";
 
@@ -116,6 +124,9 @@ export interface HomeSettings {
 	// ---- Behaviour ----
 	openOnStartup: boolean;
 	replaceNewTabs: boolean;
+	/** On mobile, show only the search field and hide the dashboard. Has no
+	 * effect on desktop, where the full dashboard is always shown. */
+	mobileSearchOnly: boolean;
 
 	// ---- Appearance (layout density) ----
 	/** Tighten card and top-of-page spacing to enlarge the usable area. */
@@ -126,8 +137,13 @@ export interface HomeSettings {
 	hiddenFilters: string[];
 
 	// ---- Dashboard ----
-	cards: DashboardCard[];
+	/** All dashboards. Always has at least one entry after migration. */
+	dashboards: Dashboard[];
+	/** Id of the dashboard currently shown. */
+	activeDashboardId: string;
 	gridColumns: number;
+	/** Height of one grid row in pixels. Lower = finer vertical sizing. */
+	rowHeight: number;
 	/** Curated note paths shown by "favorites" cards. */
 	favorites: string[];
 	/** Fit the dashboard to one screen (no scroll) vs. allow scrolling. */
@@ -152,21 +168,66 @@ export const DEFAULT_SETTINGS: HomeSettings = {
 
 	openOnStartup: true,
 	replaceNewTabs: true,
+	mobileSearchOnly: false,
 
 	compact: false,
 
 	hiddenFilters: [],
 
-	cards: [
-		{ id: "card-base", kind: "embed", title: "Embedded base", target: "", x: 0, y: 0, w: 6, h: 6 },
-		{ id: "card-note", kind: "embed", title: "Embedded note", target: "", x: 6, y: 0, w: 6, h: 2 },
-		{ id: "card-bookmarks", kind: "bookmarks", title: "Bookmarks", x: 6, y: 2, w: 6, h: 2 },
-		{ id: "card-image", kind: "embed", title: "Embedded image", target: "", x: 6, y: 4, w: 3, h: 2 },
-		{ id: "card-favorites", kind: "favorites", title: "Favorites", x: 9, y: 4, w: 3, h: 2 },
-	],
+	// Built by migration from STARTER_CARDS (fresh install) or the legacy
+	// top-level `cards` array (upgrade). Left empty here so migration always runs.
+	dashboards: [],
+	activeDashboardId: "",
 	gridColumns: 12,
+	rowHeight: 92,
 	favorites: [],
 	fitToPage: false,
 
 	maxWidth: 1100,
 };
+
+/** The cards a brand-new vault starts with. */
+function starterCards(): DashboardCard[] {
+	return [
+		{ id: "card-base", kind: "embed", title: "Embedded base", target: "", x: 0, y: 0, w: 6, h: 6 },
+		{ id: "card-note", kind: "embed", title: "Embedded note", target: "", x: 6, y: 0, w: 6, h: 2 },
+		{ id: "card-bookmarks", kind: "bookmarks", title: "Bookmarks", x: 6, y: 2, w: 6, h: 2 },
+		{ id: "card-image", kind: "embed", title: "Embedded image", target: "", x: 6, y: 4, w: 3, h: 2 },
+		{ id: "card-favorites", kind: "favorites", title: "Favorites", x: 9, y: 4, w: 3, h: 2 },
+	];
+}
+
+/** Generate a unique dashboard id. */
+export function newDashboardId(): string {
+	return `dash-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e4)}`;
+}
+
+/** The dashboard currently selected (falls back to the first one). */
+export function activeDashboard(s: HomeSettings): Dashboard {
+	return s.dashboards.find((d) => d.id === s.activeDashboardId) ?? s.dashboards[0];
+}
+
+/** Cards of the currently selected dashboard. */
+export function activeCards(s: HomeSettings): DashboardCard[] {
+	return activeDashboard(s).cards;
+}
+
+/**
+ * Bring loaded settings up to date: wrap the legacy single-board `cards` array
+ * (or the starter set) into the multi-dashboard model and backfill any new
+ * fields. Idempotent — safe to run on every load.
+ */
+export function migrateSettings(s: HomeSettings, raw: Record<string, unknown>): void {
+	if (!Array.isArray(s.dashboards) || s.dashboards.length === 0) {
+		const legacy = Array.isArray(raw.cards) ? (raw.cards as DashboardCard[]) : null;
+		s.dashboards = [
+			{ id: newDashboardId(), name: "Dashboard 1", cards: legacy ?? starterCards() },
+		];
+	}
+	if (!s.activeDashboardId || !s.dashboards.some((d) => d.id === s.activeDashboardId)) {
+		s.activeDashboardId = s.dashboards[0].id;
+	}
+	if (typeof s.rowHeight !== "number" || s.rowHeight <= 0) s.rowHeight = 92;
+	// Drop the obsolete single-board field so it can't shadow the dashboards.
+	delete (s as unknown as { cards?: unknown }).cards;
+}
