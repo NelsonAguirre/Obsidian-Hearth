@@ -58,8 +58,9 @@ embed notes, images, bases, bookmarks and quick text.
   Daily notes plugin's date format and folder), with a one-click prompt to
   create it when it doesn't exist yet. Optionally editable in place.
 - **Web page** — embed any `http(s)` URL in a sandboxed iframe.
-- **Live content** — embed and web cards can auto-refresh on an interval, so a
-  card tracking a frequently-edited note or a live page stays up to date.
+- **Live content** — embed and daily cards update automatically the moment
+  their file is created, edited or deleted; web cards can auto-refresh on an
+  interval.
 - **Bookmarks** — pulls from Obsidian's core Bookmarks plugin.
 - **Favorites** — a grid of curated note cards.
 - **Recent files** — your recently opened files (configurable count).

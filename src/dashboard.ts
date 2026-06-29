@@ -100,10 +100,10 @@ export function renderDashboard(
  *
  * Liveness is per kind:
  * - web cards keep the optional polling refresh (refreshSec);
- * - read-only embed/daily cards redraw from vault events the moment their file
- *   changes on disk — no polling, no flicker on other cards;
- * - editable embed/daily cards are never redrawn here; their textarea syncs
- *   itself so the cursor is never lost. */
+ * - embed/daily cards redraw from vault events. A create/delete/rename of the
+ *   tracked file always redraws (it flips between the content and the
+ *   "missing file" state); for content edits (modify) read-only cards redraw
+ *   while editable cards sync their textarea in place so the cursor is kept. */
 function mountCardBody(
 	view: HomeView,
 	card: DashboardCard,
@@ -128,31 +128,43 @@ function mountCardBody(
 		return;
 	}
 
-	if ((card.kind === "embed" || card.kind === "daily") && !card.editable) {
-		watchCardFile(view, card, parent, draw);
+	if (card.kind === "embed" || card.kind === "daily") {
+		// Editable cards sync content edits in their textarea, so don't redraw on
+		// modify (it would drop the cursor) — but still redraw on existence changes.
+		watchCardFile(view, card, parent, draw, !card.editable);
 	}
 }
 
-/** Redraw an embed/daily card's body whenever the file it tracks is created,
- * modified, renamed or deleted on disk. */
+/** Redraw an embed/daily card's body when the file it tracks changes on disk.
+ * create/delete/rename always redraw; modify only when `redrawOnModify`. */
 function watchCardFile(
 	view: HomeView,
 	card: DashboardCard,
 	parent: Component,
 	draw: () => void,
+	redrawOnModify: boolean,
 ): void {
 	// Coalesce bursts of writes (e.g. an editor autosaving) into one redraw.
 	const redraw = debounce(draw, 150, true);
-	const affects = (file: TAbstractFile, oldPath?: string) => {
+	const affects = (file: TAbstractFile, oldPath?: string): boolean => {
 		const path = watchedCardPath(view, card);
-		if (path == null) return;
-		if (file.path === path || oldPath === path) redraw();
+		return path != null && (file.path === path || oldPath === path);
 	};
 	const { vault } = view.app;
-	parent.registerEvent(vault.on("modify", (file) => affects(file)));
-	parent.registerEvent(vault.on("create", (file) => affects(file)));
-	parent.registerEvent(vault.on("delete", (file) => affects(file)));
-	parent.registerEvent(vault.on("rename", (file, oldPath) => affects(file, oldPath)));
+	if (redrawOnModify) {
+		parent.registerEvent(vault.on("modify", (file) => {
+			if (affects(file)) redraw();
+		}));
+	}
+	parent.registerEvent(vault.on("create", (file) => {
+		if (affects(file)) redraw();
+	}));
+	parent.registerEvent(vault.on("delete", (file) => {
+		if (affects(file)) redraw();
+	}));
+	parent.registerEvent(vault.on("rename", (file, oldPath) => {
+		if (affects(file, oldPath)) redraw();
+	}));
 }
 
 /** Save the current settings and rebuild the view (used after structural
