@@ -1,19 +1,23 @@
 import {
 	Component,
 	debounce,
+	getAllTags,
 	MarkdownRenderer,
+	MarkdownView,
 	moment,
 	Notice,
 	setIcon,
 	TFile,
+	TFolder,
 } from "obsidian";
+import type { Moment } from "moment";
 import type { HomeView } from "./view";
 import type { BookmarkItem } from "./obsidian-ext";
-import { ClockConfig, CommandItem, DashboardCard, LinkItem } from "./types";
-import { iconForFile, isExcalidraw } from "./filetypes";
+import { ClockConfig, CommandItem, DashboardCard, LinkItem, TasksConfig } from "./types";
+import { EXCALIDRAW_PLUGIN_ID, iconForFile, isExcalidraw } from "./filetypes";
 
-/** Community plugin id for Excalidraw (used to detect drawing support). */
-const EXCALIDRAW_PLUGIN_ID = "obsidian-excalidraw-plugin";
+/** Community plugin id for TaskNotes (used by "tasks" cards in TaskNotes mode). */
+const TASKNOTES_PLUGIN_ID = "tasknotes";
 
 /** Render a card's body based on its kind. */
 export function renderCardBody(
@@ -52,6 +56,15 @@ export function renderCardBody(
 			break;
 		case "clock":
 			renderClock(view, card, body, component);
+			break;
+		case "tasks":
+			renderTasks(view, card, body);
+			break;
+		case "calendar":
+			renderCalendar(view, body);
+			break;
+		case "stats":
+			renderStats(view, body);
 			break;
 	}
 }
@@ -135,6 +148,15 @@ function renderEmbed(
 		// Images, canvas, .base and Excalidraw go through Obsidian's own
 		// transclusion embed, which handles those file types uniformly.
 		void MarkdownRenderer.render(view.app, `![[${target}]]`, host, target, component);
+
+		// Canvas and Excalidraw embeds are natively interactive (pan/zoom, and
+		// their own in-place edit toggle) — let them fill the card edge-to-edge
+		// instead of sitting in a small box inside a scrolling body, so their
+		// own pan gestures don't fight the card's scrollbar.
+		if (ext === "canvas" || excalidraw) {
+			host.addClass("hearth-embed-live");
+			body.addClass("hearth-card-body-live");
+		}
 	}
 }
 
@@ -260,12 +282,24 @@ interface DailyNotesOptions {
 	folder?: string;
 }
 
-/** Resolve today's daily-note path from the core Daily notes plugin settings. */
-function todaysDailyNotePath(options: DailyNotesOptions): string {
+/** The core Daily notes plugin's options, or null if it's disabled. Shared by
+ * every card that resolves a daily-note path (daily, calendar, stats). */
+function dailyNotesOptions(view: HomeView): DailyNotesOptions | null {
+	const plugin = view.app.internalPlugins.getPluginById("daily-notes");
+	if (!plugin?.enabled) return null;
+	return (plugin.instance as { options?: DailyNotesOptions } | undefined)?.options ?? {};
+}
+
+/** Resolve the daily-note path for an arbitrary date from the core Daily
+ * notes plugin settings. */
+function dailyNotePath(date: Moment, options: DailyNotesOptions): string {
 	const format = (options.format || "").trim() || "YYYY-MM-DD";
 	const folder = (options.folder || "").trim().replace(/^\/+|\/+$/g, "");
-	const stamp = moment().format(format);
-	return `${folder ? `${folder}/` : ""}${stamp}.md`;
+	return `${folder ? `${folder}/` : ""}${date.format(format)}.md`;
+}
+
+function todaysDailyNotePath(options: DailyNotesOptions): string {
+	return dailyNotePath(moment(), options);
 }
 
 /**
@@ -279,13 +313,12 @@ function renderDaily(
 	body: HTMLElement,
 	component: Component,
 ): void {
-	const plugin = view.app.internalPlugins.getPluginById("daily-notes");
-	if (!plugin?.enabled) {
+	const options = dailyNotesOptions(view);
+	if (!options) {
 		emptyState(body, "calendar", "Enable the core Daily notes plugin");
 		return;
 	}
 
-	const options = (plugin.instance as { options?: DailyNotesOptions } | undefined)?.options ?? {};
 	const path = todaysDailyNotePath(options);
 	const file = view.app.vault.getAbstractFileByPath(path);
 
@@ -334,13 +367,179 @@ function renderDaily(
 export function watchedCardPath(view: HomeView, card: DashboardCard): string | null {
 	if (card.kind === "embed") return card.target?.trim() || null;
 	if (card.kind === "daily") {
-		const plugin = view.app.internalPlugins.getPluginById("daily-notes");
-		if (!plugin?.enabled) return null;
-		const options =
-			(plugin.instance as { options?: DailyNotesOptions } | undefined)?.options ?? {};
+		const options = dailyNotesOptions(view);
+		if (!options) return null;
 		return todaysDailyNotePath(options);
 	}
 	return null;
+}
+
+// ---- Mini calendar -------------------------------------------------------
+
+/** A month grid resolved against the core Daily notes plugin's format/folder:
+ * dots mark days with an existing note, clicking one opens it, clicking
+ * today when it doesn't exist yet safely falls back to the core "Open
+ * today's daily note" command (template-aware). Other empty days are left
+ * alone rather than guessing at template handling for arbitrary dates. */
+function renderCalendar(view: HomeView, body: HTMLElement): void {
+	const options = dailyNotesOptions(view);
+	if (!options) {
+		emptyState(body, "calendar-days", "Enable the core Daily notes plugin");
+		return;
+	}
+
+	const wrap = body.createDiv("hearth-calendar");
+	let cursor = moment().startOf("month");
+
+	const draw = () => {
+		wrap.empty();
+		renderCalendarHead(wrap, cursor, {
+			onPrev: () => {
+				cursor = cursor.clone().subtract(1, "month");
+				draw();
+			},
+			onNext: () => {
+				cursor = cursor.clone().add(1, "month");
+				draw();
+			},
+			onToday: () => {
+				cursor = moment().startOf("month");
+				draw();
+			},
+		});
+		renderCalendarGrid(view, wrap, cursor, options);
+	};
+	draw();
+}
+
+function renderCalendarHead(
+	wrap: HTMLElement,
+	cursor: Moment,
+	handlers: { onPrev: () => void; onNext: () => void; onToday: () => void },
+): void {
+	const head = wrap.createDiv("hearth-calendar-head");
+	const prev = head.createEl("button", { cls: "hearth-calendar-nav", attr: { "aria-label": "Previous month" } });
+	setIcon(prev, "chevron-left");
+	prev.addEventListener("click", handlers.onPrev);
+
+	const label = head.createDiv({ cls: "hearth-calendar-label", text: cursor.format("MMMM YYYY") });
+	label.setAttribute("title", "Back to today");
+	label.addEventListener("click", handlers.onToday);
+
+	const next = head.createEl("button", { cls: "hearth-calendar-nav", attr: { "aria-label": "Next month" } });
+	setIcon(next, "chevron-right");
+	next.addEventListener("click", handlers.onNext);
+}
+
+function renderCalendarGrid(
+	view: HomeView,
+	wrap: HTMLElement,
+	cursor: Moment,
+	options: DailyNotesOptions,
+): void {
+	const grid = wrap.createDiv("hearth-calendar-grid");
+	const startOfWeek = moment.localeData().firstDayOfWeek();
+
+	for (let i = 0; i < 7; i++) {
+		const dow = (startOfWeek + i) % 7;
+		grid.createDiv({ cls: "hearth-calendar-dow", text: moment().day(dow).format("dd") });
+	}
+
+	const monthStart = cursor.clone().startOf("month");
+	const monthEnd = cursor.clone().endOf("month");
+	const gridStart = monthStart.clone().subtract((monthStart.day() - startOfWeek + 7) % 7, "days");
+	const totalCells = Math.ceil((monthEnd.diff(gridStart, "days") + 1) / 7) * 7;
+
+	const today = moment().format("YYYY-MM-DD");
+	for (let i = 0; i < totalCells; i++) {
+		const day = gridStart.clone().add(i, "days");
+		const path = dailyNotePath(day, options);
+		const file = view.app.vault.getAbstractFileByPath(path);
+		const isToday = day.format("YYYY-MM-DD") === today;
+
+		const cell = grid.createDiv("hearth-calendar-day");
+		cell.toggleClass("is-outside", day.month() !== cursor.month());
+		cell.toggleClass("is-today", isToday);
+		cell.toggleClass("has-note", file instanceof TFile);
+		cell.createDiv({ cls: "hearth-calendar-daynum", text: String(day.date()) });
+		if (file instanceof TFile) cell.createDiv("hearth-calendar-dot");
+
+		cell.addEventListener("click", () => {
+			if (file instanceof TFile) {
+				void view.app.workspace.getLeaf(true).openFile(file);
+			} else if (isToday) {
+				if (!view.app.commands.executeCommandById("daily-notes")) {
+					new Notice("Hearth: couldn't open today's daily note.");
+				}
+			} else {
+				new Notice(`Hearth: no daily note for ${day.format("MMM D, YYYY")} yet.`);
+			}
+		});
+	}
+}
+
+// ---- Vault statistics -----------------------------------------------------
+
+/** Cheap vault stats — everything here comes from the already-loaded vault
+ * index and metadata cache, never a file read, so it's fast even on large
+ * vaults. */
+function renderStats(view: HomeView, body: HTMLElement): void {
+	const vault = view.app.vault;
+	let notes = 0;
+	let attachments = 0;
+	let folders = 0;
+	for (const f of vault.getAllLoadedFiles()) {
+		if (f instanceof TFolder) {
+			if (f.path !== "/") folders++;
+		} else if (f instanceof TFile) {
+			if (f.extension.toLowerCase() === "md") notes++;
+			else attachments++;
+		}
+	}
+
+	const tags = new Set<string>();
+	for (const file of vault.getMarkdownFiles()) {
+		const cache = view.app.metadataCache.getFileCache(file);
+		if (!cache) continue;
+		for (const t of getAllTags(cache) ?? []) tags.add(t.toLowerCase());
+	}
+
+	const grid = body.createDiv("hearth-stats");
+	addStat(grid, "file-text", notes, "Notes");
+	addStat(grid, "paperclip", attachments, "Attachments");
+	addStat(grid, "folder", folders, "Folders");
+	addStat(grid, "tag", tags.size, "Tags");
+
+	const streak = dailyNoteStreak(view);
+	if (streak !== null) addStat(grid, "flame", streak, "Day streak");
+}
+
+function addStat(grid: HTMLElement, icon: string, value: number, label: string): void {
+	const cell = grid.createDiv("hearth-stat");
+	setIcon(cell.createDiv("hearth-stat-icon"), icon);
+	cell.createDiv({ cls: "hearth-stat-value", text: String(value) });
+	cell.createDiv({ cls: "hearth-stat-label", text: label });
+}
+
+/** Consecutive days with an existing daily note, counting back from today —
+ * or from yesterday if today's isn't written yet, so an otherwise-unbroken
+ * streak doesn't read as zero just because the day isn't over. */
+function dailyNoteStreak(view: HomeView): number | null {
+	const options = dailyNotesOptions(view);
+	if (!options) return null;
+
+	let day = moment();
+	if (!(view.app.vault.getAbstractFileByPath(dailyNotePath(day, options)) instanceof TFile)) {
+		day = day.clone().subtract(1, "day");
+	}
+
+	let streak = 0;
+	while (view.app.vault.getAbstractFileByPath(dailyNotePath(day, options)) instanceof TFile) {
+		streak++;
+		day = day.clone().subtract(1, "day");
+		if (streak > 3650) break;
+	}
+	return streak;
 }
 
 // ---- Web / iframe embed -------------------------------------------------
@@ -631,6 +830,187 @@ function renderCommands(view: HomeView, card: DashboardCard, body: HTMLElement):
 
 function runCommand(view: HomeView, cmd: CommandItem): void {
 	if (cmd.id) view.app.commands.executeCommandById(cmd.id);
+}
+
+// ---- Tasks ---------------------------------------------------------------
+
+interface TaskHit {
+	file: TFile;
+	/** Line index for checkbox tasks; -1 for TaskNotes tasks (whole-file, no
+	 * single line to jump to or toggle in place). */
+	line: number;
+	text: string;
+	done: boolean;
+	due: string | null;
+	/** Raw TaskNotes status value, shown as a badge instead of a checkbox
+	 * since it may not be a simple open/done binary. */
+	status?: string;
+}
+
+/** Whether `path` is in scope per the card's folder whitelist/blacklist. An
+ * empty whitelist matches nothing; an empty blacklist excludes nothing. */
+function inTaskScope(path: string, cfg: TasksConfig): boolean {
+	const mode = cfg.folderScope ?? "all";
+	if (mode === "all") return true;
+	const folders = (cfg.folders ?? [])
+		.map((f) => f.trim().replace(/\/+$/, ""))
+		.filter(Boolean);
+	if (folders.length === 0) return mode === "blacklist";
+	const matches = folders.some((f) => path === f || path.startsWith(`${f}/`));
+	return mode === "whitelist" ? matches : !matches;
+}
+
+function renderTasks(view: HomeView, card: DashboardCard, body: HTMLElement): void {
+	const cfg = card.tasks ?? {};
+	const listEl = body.createDiv("hearth-list hearth-tasks");
+	const refresh = () => void loadAndRenderTasks(view, cfg, listEl, refresh);
+	refresh();
+}
+
+async function loadAndRenderTasks(
+	view: HomeView,
+	cfg: TasksConfig,
+	listEl: HTMLElement,
+	refresh: () => void,
+): Promise<void> {
+	listEl.empty();
+	const source = cfg.source ?? "checkbox";
+
+	let hits: TaskHit[];
+	if (source === "tasknotes") {
+		if (!view.app.plugins.enabledPlugins.has(TASKNOTES_PLUGIN_ID)) {
+			emptyState(listEl, "list-todo", "Enable the TaskNotes plugin, or switch source to checkboxes");
+			return;
+		}
+		hits = collectTaskNotesTasks(view, cfg);
+	} else {
+		hits = await collectCheckboxTasks(view, cfg);
+	}
+
+	if (!cfg.showCompleted) hits = hits.filter((h) => !h.done);
+
+	hits.sort((a, b) => {
+		if (a.due && b.due) return a.due < b.due ? -1 : a.due > b.due ? 1 : 0;
+		if (a.due) return -1;
+		if (b.due) return 1;
+		return a.file.path.localeCompare(b.file.path);
+	});
+
+	const limit = cfg.count && cfg.count > 0 ? cfg.count : 10;
+	hits = hits.slice(0, limit);
+
+	if (hits.length === 0) {
+		emptyState(listEl, "list-todo", "No open tasks");
+		return;
+	}
+
+	const today = moment().format("YYYY-MM-DD");
+	for (const hit of hits) {
+		const row = listEl.createDiv("hearth-list-item hearth-task");
+		row.toggleClass("is-done", hit.done);
+
+		if (hit.line >= 0) {
+			const check = row.createEl("input", {
+				cls: "hearth-task-check",
+				attr: { type: "checkbox" },
+			});
+			check.checked = hit.done;
+			check.addEventListener("click", (e) => e.stopPropagation());
+			check.addEventListener("change", () => {
+				void toggleCheckboxTask(view, hit).then(refresh);
+			});
+		} else if (hit.status) {
+			row.createDiv({ cls: "hearth-task-status", text: hit.status });
+		}
+
+		row.createDiv({ cls: "hearth-list-label hearth-task-text", text: hit.text || hit.file.basename });
+		if (hit.due) {
+			const due = row.createDiv({ cls: "hearth-task-due", text: hit.due });
+			due.toggleClass("is-overdue", !hit.done && hit.due < today);
+		}
+
+		row.addEventListener("click", () => void openTask(view, hit));
+	}
+}
+
+/** Scan plain Markdown `- [ ]`/`- [x]` checkboxes in every in-scope note. A
+ * trailing 📅 YYYY-MM-DD (the Tasks-plugin emoji convention) is read as the
+ * due date when present. */
+async function collectCheckboxTasks(view: HomeView, cfg: TasksConfig): Promise<TaskHit[]> {
+	const files = view.app.vault.getMarkdownFiles().filter((f) => inTaskScope(f.path, cfg));
+	const hits: TaskHit[] = [];
+	for (const file of files) {
+		const content = await view.app.vault.cachedRead(file);
+		const lines = content.split("\n");
+		lines.forEach((line, i) => {
+			const match = /^\s*[-*+]\s\[([ xX])\]\s*(.*)$/.exec(line);
+			if (!match) return;
+			const text = match[2].trim();
+			const dueMatch = /📅\s*(\d{4}-\d{2}-\d{2})/.exec(text);
+			hits.push({
+				file,
+				line: i,
+				text,
+				done: match[1].toLowerCase() === "x",
+				due: dueMatch ? dueMatch[1] : null,
+			});
+		});
+	}
+	return hits;
+}
+
+/** Read TaskNotes task notes directly via frontmatter (see TasksConfig.source
+ * doc for why: no stable public API, and field names are user-remappable).
+ * Only files that actually have the configured status field are treated as
+ * tasks, so unrelated notes with a `due` or `priority` property aren't
+ * mistaken for one. */
+function collectTaskNotesTasks(view: HomeView, cfg: TasksConfig): TaskHit[] {
+	const s = view.plugin.settings;
+	const statusField = s.taskNotesStatusField.trim() || "status";
+	const dueField = s.taskNotesDueField.trim() || "due";
+	const doneValue = (s.taskNotesDoneValue.trim() || "done").toLowerCase();
+
+	const files = view.app.vault.getMarkdownFiles().filter((f) => inTaskScope(f.path, cfg));
+	const hits: TaskHit[] = [];
+	for (const file of files) {
+		const fm = view.app.metadataCache.getFileCache(file)?.frontmatter;
+		if (!fm || !(statusField in fm)) continue;
+		const status = String(fm[statusField] ?? "");
+		const due = typeof fm[dueField] === "string" ? fm[dueField] : null;
+		hits.push({
+			file,
+			line: -1,
+			text: String(fm.title ?? file.basename),
+			done: status.toLowerCase() === doneValue,
+			due,
+			status,
+		});
+	}
+	return hits;
+}
+
+/** Flip a checkbox task's `[ ]`/`[x]` in place. Only used for checkbox tasks —
+ * TaskNotes status is left to TaskNotes' own UI since it may be a multi-step
+ * workflow, not a plain open/done toggle. */
+async function toggleCheckboxTask(view: HomeView, hit: TaskHit): Promise<void> {
+	const content = await view.app.vault.read(hit.file);
+	const lines = content.split("\n");
+	const line = lines[hit.line];
+	if (line == null) return;
+	lines[hit.line] = hit.done
+		? line.replace(/\[[xX]\]/, "[ ]")
+		: line.replace(/\[ \]/, "[x]");
+	await view.app.vault.modify(hit.file, lines.join("\n"));
+}
+
+async function openTask(view: HomeView, hit: TaskHit): Promise<void> {
+	const leaf = view.app.workspace.getLeaf(true);
+	await leaf.openFile(hit.file);
+	if (hit.line >= 0 && leaf.view instanceof MarkdownView) {
+		const pos = { line: hit.line, ch: 0 };
+		leaf.view.editor.setCursor(pos);
+		leaf.view.editor.scrollIntoView({ from: pos, to: pos }, true);
+	}
 }
 
 // ---- Clock / greeting ---------------------------------------------------

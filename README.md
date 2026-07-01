@@ -7,12 +7,13 @@ launcher in one. Hearth gives your vault a welcoming front page: a big search
 field, quick file-type filters, a new-note button, and a grid of cards that
 embed notes, images, bases, bookmarks and quick text.
 
-> Status: **v0.9** — the top section and a fully arrangeable card dashboard
+> Status: **v0.10** — the top section and a fully arrangeable card dashboard
 > (drag, resize, collision-aware packing, on-board card management, templates,
 > per-card colors, web embeds, live auto-refreshing, zoomable and editable
 > embeds, Excalidraw and canvas cards, multiple switchable dashboards with
-> per-board overrides, pinned cards, a search-only mobile mode, layout
-> import/export) are in. See [Roadmap](#roadmap) for what's next.
+> per-board overrides, pinned cards, a search-only mobile mode with a
+> customizable action bar, tag/frontmatter search, Tasks/calendar/stats cards,
+> layout import/export) are in. See [Roadmap](#roadmap) for what's next.
 
 ## Screenshots
 
@@ -36,7 +37,10 @@ embed notes, images, bases, bookmarks and quick text.
 - **Customizable title / logo** — set any title text and an emoji/short logo.
 - **Vault search** — fuzzy search across your whole vault (the `.obsidian`
   config folder is ignored automatically). Keyboard friendly: `↑`/`↓` to move,
-  `Enter` to open, `Esc` to dismiss.
+  `Enter` to open, `Esc` to dismiss. A leading `#` switches to **tag search**;
+  `key:value` (or bare `key:`) switches to **frontmatter property search** —
+  both distinct, transparent modes that show exactly what matched. An empty,
+  focused search field quietly offers your recently opened files.
 - **Auto-detected filters** — file-type filter chips are generated from what
   actually lives in your vault, grouped sensibly (Notes, Images, Videos,
   Sheets, Slides, Documents, Folders, Canvas, Bases…), each with a fitting
@@ -54,7 +58,17 @@ embed notes, images, bases, bookmarks and quick text.
   back to the vault.
 - **Excalidraw & canvas cards** — dedicated templates for embedding an
   Excalidraw drawing or a `.canvas` file, with a friendly prompt when the
-  required plugin isn't enabled.
+  required plugin isn't enabled. Both fill the card edge-to-edge so their own
+  native pan/zoom (and Excalidraw's in-place edit toggle) work like they do in
+  a regular note.
+- **Tasks** — scans Markdown checkboxes across whitelisted/blacklisted
+  folders (with 📅 due-date parsing, click-to-toggle, click-to-open at the
+  line), or reads TaskNotes' task notes via frontmatter (field names
+  configurable in settings, since TaskNotes has no public API).
+- **Mini calendar** — a month grid resolved from the core Daily notes
+  plugin's format/folder, with a dot on days that already have a note.
+- **Vault statistics** — notes, attachments, folders, unique tags and your
+  daily-note streak, read entirely from the in-memory vault index.
 - **Daily note** — always shows *today's* daily note (resolved from the core
   Daily notes plugin's date format and folder), with a one-click prompt to
   create it when it doesn't exist yet and a hideable button to open it in the
@@ -104,6 +118,12 @@ embed notes, images, bases, bookmarks and quick text.
 ### Mobile
 - **Mobile mode** — an optional search-only launcher: on phones and tablets the
   dashboard collapses to just the search field (desktop is unaffected).
+- **Mobile action bar** — in Mobile mode, the “New note” button moves out from
+  beside the search bar into a row of buttons under the search field and
+  filters, pinned to the bottom quarter of the screen. Ships with **New
+  note**, **New drawing** (Excalidraw), **Record voice** (core Audio
+  recorder) and **Open daily note**, but every button can be swapped for any
+  command from the same picker used by the Commands card.
 
 ## Usage
 - Hearth opens automatically on startup and replaces empty new tabs (both
@@ -188,6 +208,23 @@ into `<vault>/.obsidian/plugins/hearth/`.
 - [x] **Open-note button** — a hideable button on the daily-note card
 - [x] **Analogue clock & richer dates** — analogue face, more date formats
   (incl. custom), and optional playful greetings
+- [x] **Mobile action bar** — a customizable row of buttons (New note, New
+  drawing, Record voice, Open daily note by default) pinned to the bottom
+  quarter of the screen in Mobile mode, each button replaceable with any
+  command
+- [x] **Interactive Excalidraw/canvas cards** — embeds fill the card so native
+  pan/zoom and in-place editing work like they do in a regular note
+- [x] **Tag search** — a leading `#` searches vault tags instead of names,
+  showing which tag matched
+- [x] **Frontmatter property search** — `key:value` (or bare `key:`) searches
+  frontmatter properties directly
+- [x] **Recent-files search history** — a focused, empty search field quietly
+  offers recently opened files
+- [x] **Tasks card** — Markdown checkboxes or TaskNotes frontmatter, with
+  folder whitelist/blacklist
+- [x] **Mini calendar card** — a month grid of daily notes
+- [x] **Vault statistics card** — notes/attachments/folders/tags counts and a
+  daily-note streak
 ### Planned
 
 Bigger ideas

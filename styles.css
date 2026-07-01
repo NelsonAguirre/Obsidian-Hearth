@@ -232,6 +232,13 @@
 	font-size: 0.78rem;
 }
 
+/* Shown on tag/property-search hits instead of the folder path, so it's
+ * visible what actually matched. */
+.hearth-result-badge {
+	color: var(--interactive-accent);
+	font-size: 0.78rem;
+}
+
 .hearth-search-empty {
 	padding: 12px;
 	text-align: center;
@@ -399,6 +406,29 @@
 	opacity: 0.6;
 }
 
+/* Canvas / Excalidraw embeds: give the actual embedded view (Obsidian's own
+ * interactive canvas preview, or Excalidraw's in-place edit toggle) the full
+ * card so pan/zoom feels native instead of cramped in a small fixed box. */
+.hearth-card-body.hearth-card-body-live {
+	overflow: hidden;
+	padding: 0;
+}
+
+.hearth-embed-live {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+}
+
+/* Obsidian/Excalidraw set an inline height on the embed's own root element;
+ * !important is needed to override that and stretch it to the card. */
+.hearth-embed-live > * {
+	flex: 1 1 auto;
+	min-height: 0;
+	width: 100%;
+	height: 100% !important;
+}
+
 /* Daily-note card: the "create today's note" prompt button. */
 .hearth-daily-create {
 	margin-top: 10px;
@@ -522,6 +552,41 @@
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+}
+
+/* Tasks card */
+.hearth-task-text {
+	flex: 1;
+}
+
+.hearth-task.is-done .hearth-task-text {
+	color: var(--text-faint);
+	text-decoration: line-through;
+}
+
+.hearth-task-check {
+	flex-shrink: 0;
+	margin: 0;
+}
+
+.hearth-task-due {
+	flex-shrink: 0;
+	font-size: 0.78rem;
+	color: var(--text-muted);
+}
+
+.hearth-task-due.is-overdue {
+	color: var(--text-error);
+}
+
+.hearth-task-status {
+	flex-shrink: 0;
+	padding: 1px 8px;
+	border-radius: 999px;
+	background: var(--background-modifier-hover);
+	color: var(--text-muted);
+	font-size: 0.72rem;
+	white-space: nowrap;
 }
 
 /* Favorites cards */
@@ -733,6 +798,139 @@
 	fill: var(--interactive-accent);
 }
 
+/* Mini calendar card */
+.hearth-calendar {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	gap: 8px;
+}
+
+.hearth-calendar-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.hearth-calendar-nav {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	border-radius: 7px;
+	border: none;
+	background: transparent;
+	color: var(--text-muted);
+	cursor: pointer;
+}
+
+.hearth-calendar-nav:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.hearth-calendar-label {
+	font-weight: 600;
+	font-size: 0.92rem;
+	color: var(--text-normal);
+	cursor: pointer;
+}
+
+.hearth-calendar-grid {
+	display: grid;
+	grid-template-columns: repeat(7, minmax(0, 1fr));
+	gap: 2px;
+	flex: 1;
+}
+
+.hearth-calendar-dow {
+	text-align: center;
+	font-size: 0.7rem;
+	color: var(--text-faint);
+	padding-bottom: 4px;
+}
+
+.hearth-calendar-day {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 2px;
+	border-radius: 7px;
+	cursor: pointer;
+	min-height: 28px;
+}
+
+.hearth-calendar-day:hover {
+	background: var(--background-modifier-hover);
+}
+
+.hearth-calendar-daynum {
+	font-size: 0.82rem;
+	color: var(--text-normal);
+}
+
+.hearth-calendar-day.is-outside .hearth-calendar-daynum {
+	color: var(--text-faint);
+}
+
+.hearth-calendar-day.is-today .hearth-calendar-daynum {
+	color: var(--text-on-accent);
+	background: var(--interactive-accent);
+	border-radius: 999px;
+	width: 20px;
+	height: 20px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.hearth-calendar-dot {
+	width: 4px;
+	height: 4px;
+	border-radius: 50%;
+	background: var(--interactive-accent);
+}
+
+.hearth-calendar-day.is-today .hearth-calendar-dot {
+	background: var(--text-normal);
+}
+
+/* Vault statistics card */
+.hearth-stats {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+	gap: 10px;
+	height: 100%;
+	align-content: center;
+}
+
+.hearth-stat {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	text-align: center;
+}
+
+.hearth-stat-icon {
+	display: flex;
+	color: var(--text-muted);
+}
+
+.hearth-stat-value {
+	font-size: 1.3rem;
+	font-weight: 700;
+	color: var(--text-normal);
+}
+
+.hearth-stat-label {
+	font-size: 0.72rem;
+	color: var(--text-faint);
+}
+
 /* ---- Toolbar -------------------------------------------------------- */
 
 .hearth-toolbar {
@@ -872,6 +1070,57 @@
 
 .hearth-view.hearth-mobile-only .hearth-inner {
 	gap: 20px;
+}
+
+/* ---- Mobile action bar (Mobile mode) --------------------------------- */
+
+/* Pinned to the bottom quarter of the screen, independent of the centred
+ * search/filters above it (a sibling of .hearth-inner inside .hearth-scroll,
+ * which is position: relative). */
+.hearth-mobile-actions {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	min-height: 25%;
+	display: flex;
+	flex-wrap: wrap;
+	align-content: center;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	padding: 12px 24px calc(env(safe-area-inset-bottom, 0px) + 12px);
+}
+
+.hearth-mobile-action {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	height: 48px;
+	padding: 0 16px;
+	border-radius: 14px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	cursor: pointer;
+	font-size: 0.92rem;
+	white-space: nowrap;
+	transition: background 120ms ease, border-color 120ms ease;
+}
+
+.hearth-mobile-action:hover {
+	background: var(--background-modifier-hover);
+	border-color: var(--interactive-accent);
+}
+
+.hearth-mobile-action-icon {
+	display: flex;
+}
+
+/* Hide while the on-screen keyboard is up so it doesn't sit on top of it or
+ * cover the search results dropdown. */
+.hearth-view.hearth-kbd-open .hearth-mobile-actions {
+	display: none;
 }
 
 /* ---- Empty board (no cards): centre the search like a launcher ------ */

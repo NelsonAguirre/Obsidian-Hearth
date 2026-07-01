@@ -9,7 +9,10 @@ export type CardKind =
 	| "recent"
 	| "links"
 	| "commands"
-	| "clock";
+	| "clock"
+	| "tasks"
+	| "calendar"
+	| "stats";
 
 /** A single command tile inside a "commands" card. */
 export interface CommandItem {
@@ -19,6 +22,23 @@ export interface CommandItem {
 	name: string;
 	/** Optional Lucide icon id; falls back to a generic command icon. */
 	icon?: string;
+}
+
+/** Per-card configuration for a "tasks" card. */
+export interface TasksConfig {
+	/** "checkbox" (default) scans plain Markdown `- [ ]` checkboxes anywhere
+	 * in scope. "tasknotes" reads frontmatter from the TaskNotes community
+	 * plugin's task notes instead, using the field-name mapping configured in
+	 * Settings → Hearth (TaskNotes has no stable public API to query, so this
+	 * reads its files the same way TaskNotes itself does: frontmatter). */
+	source?: "checkbox" | "tasknotes";
+	/** How `folders` is applied. "all" (default) scans the whole vault. */
+	folderScope?: "all" | "whitelist" | "blacklist";
+	folders?: string[];
+	/** Include already-completed tasks. Default false (hide done). */
+	showCompleted?: boolean;
+	/** Max tasks shown, soonest/overdue due date first. Default 10. */
+	count?: number;
 }
 
 /** Per-card configuration for a "clock" card. All fields are optional; omitted
@@ -40,6 +60,18 @@ export interface ClockConfig {
 	dateMode?: "full" | "long" | "short" | "iso" | "weekday" | "custom" | "none";
 	/** moment.js format string used when dateMode is "custom". */
 	dateFormat?: string;
+}
+
+/** A single button in the mobile action bar (shown under the search bar and
+ * filters in Mobile mode). `commandId` is any registered Obsidian command id
+ * — Hearth's own defaults (new note, new drawing, record voice, open daily
+ * note) are registered as ordinary commands too, so any button can be
+ * replaced with any command from any plugin. */
+export interface MobileActionButton {
+	id: string;
+	label: string;
+	icon: string;
+	commandId: string;
 }
 
 /** A single tile inside a "links" (launchpad) card. */
@@ -74,6 +106,8 @@ export interface DashboardCard {
 	count?: number;
 	/** kind === "clock": time/greeting/date display options. */
 	clock?: ClockConfig;
+	/** kind === "tasks": source, folder scope and display options. */
+	tasks?: TasksConfig;
 
 	// ---- Live content ----
 	/** Auto-refresh interval in seconds for live content (embed / web). 0 or
@@ -162,6 +196,11 @@ export interface HomeSettings {
 	/** On mobile, show only the search field and hide the dashboard. Has no
 	 * effect on desktop, where the full dashboard is always shown. */
 	mobileSearchOnly: boolean;
+	/** In Mobile mode, show the customizable action button row under the
+	 * search bar and filters instead of the "New note" button beside search. */
+	showMobileActionBar: boolean;
+	/** Buttons shown in the mobile action bar. */
+	mobileActionButtons: MobileActionButton[];
 
 	// ---- Appearance (layout density) ----
 	/** Tighten card and top-of-page spacing to enlarge the usable area. */
@@ -186,6 +225,16 @@ export interface HomeSettings {
 	/** Fit the dashboard to one screen (no scroll) vs. allow scrolling. */
 	fitToPage: boolean;
 
+	// ---- Tasks / TaskNotes ----
+	/** Frontmatter property names read by "tasks" cards in TaskNotes mode.
+	 * TaskNotes has no stable API for other plugins, and its own field names
+	 * are user-remappable, so these mirror its defaults and can be adjusted
+	 * to match whatever the vault has them set to. */
+	taskNotesStatusField: string;
+	taskNotesDueField: string;
+	/** The status value that counts as "done". */
+	taskNotesDoneValue: string;
+
 	// ---- Layout ----
 	maxWidth: number;
 }
@@ -195,7 +244,7 @@ export const DEFAULT_SETTINGS: HomeSettings = {
 	showTitle: true,
 	// Empty => the Hearth crystal icon is shown as the brand mark.
 	logo: "",
-	searchPlaceholder: "Search the vault",
+	searchPlaceholder: "Search the vault, #tag, or property:value",
 	showNewNoteButton: true,
 
 	backgroundKind: "none",
@@ -206,6 +255,10 @@ export const DEFAULT_SETTINGS: HomeSettings = {
 	openOnStartup: true,
 	replaceNewTabs: true,
 	mobileSearchOnly: false,
+	showMobileActionBar: true,
+	// Backfilled by migrateSettings so a fresh install gets the defaults below
+	// and existing vaults aren't silently reset if the list is emptied.
+	mobileActionButtons: [],
 
 	compact: false,
 
@@ -221,6 +274,10 @@ export const DEFAULT_SETTINGS: HomeSettings = {
 	favorites: [],
 	fitToPage: false,
 
+	taskNotesStatusField: "status",
+	taskNotesDueField: "due",
+	taskNotesDoneValue: "done",
+
 	maxWidth: 1100,
 };
 
@@ -232,6 +289,18 @@ function starterCards(): DashboardCard[] {
 		{ id: "card-bookmarks", kind: "bookmarks", title: "Bookmarks", x: 6, y: 2, w: 6, h: 2 },
 		{ id: "card-image", kind: "embed", title: "Embedded image", target: "", x: 6, y: 4, w: 3, h: 2 },
 		{ id: "card-favorites", kind: "favorites", title: "Favorites", x: 9, y: 4, w: 3, h: 2 },
+	];
+}
+
+/** The mobile action bar's default buttons. Each `commandId` is a command
+ * Hearth registers itself, so replacing one via the command picker works
+ * exactly like swapping in any other plugin's command. */
+export function defaultMobileActionButtons(): MobileActionButton[] {
+	return [
+		{ id: "action-new-note", label: "New note", icon: "plus", commandId: "hearth:new-note" },
+		{ id: "action-new-drawing", label: "New drawing", icon: "pen-tool", commandId: "hearth:new-drawing" },
+		{ id: "action-record-voice", label: "Record voice", icon: "mic", commandId: "hearth:record-voice" },
+		{ id: "action-daily-note", label: "Daily note", icon: "calendar", commandId: "hearth:open-daily-note" },
 	];
 }
 
@@ -332,6 +401,11 @@ export function migrateSettings(s: HomeSettings, raw: Record<string, unknown>): 
 	}
 	if (typeof s.rowHeight !== "number" || s.rowHeight <= 0) s.rowHeight = 92;
 	if (!Array.isArray(s.pinnedCards)) s.pinnedCards = [];
+	// Seed the default buttons only if the field was never persisted, so an
+	// intentionally emptied list (all buttons removed) isn't reset on reload.
+	if (!Array.isArray(raw.mobileActionButtons)) {
+		s.mobileActionButtons = defaultMobileActionButtons();
+	}
 	// Drop the obsolete single-board field so it can't shadow the dashboards.
 	delete (s as unknown as { cards?: unknown }).cards;
 }
