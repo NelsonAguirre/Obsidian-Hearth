@@ -554,6 +554,41 @@
 	text-overflow: ellipsis;
 }
 
+/* Tasks card */
+.hearth-task-text {
+	flex: 1;
+}
+
+.hearth-task.is-done .hearth-task-text {
+	color: var(--text-faint);
+	text-decoration: line-through;
+}
+
+.hearth-task-check {
+	flex-shrink: 0;
+	margin: 0;
+}
+
+.hearth-task-due {
+	flex-shrink: 0;
+	font-size: 0.78rem;
+	color: var(--text-muted);
+}
+
+.hearth-task-due.is-overdue {
+	color: var(--text-error);
+}
+
+.hearth-task-status {
+	flex-shrink: 0;
+	padding: 1px 8px;
+	border-radius: 999px;
+	background: var(--background-modifier-hover);
+	color: var(--text-muted);
+	font-size: 0.72rem;
+	white-space: nowrap;
+}
+
 /* Favorites cards */
 .hearth-favorites {
 	display: grid;

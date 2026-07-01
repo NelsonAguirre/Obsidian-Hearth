@@ -1,6 +1,6 @@
 import { App, Modal, Setting } from "obsidian";
 import { CommandPickerModal, FilePickerModal } from "./pickers";
-import { CardKind, ClockConfig, DashboardCard, LinkItem } from "./types";
+import { CardKind, ClockConfig, DashboardCard, LinkItem, TasksConfig } from "./types";
 
 const CARD_KIND_LABELS: Record<CardKind, string> = {
 	embed: "Embed (note / image / base)",
@@ -13,6 +13,9 @@ const CARD_KIND_LABELS: Record<CardKind, string> = {
 	links: "Links / launchpad",
 	commands: "Commands",
 	clock: "Clock & greeting",
+	tasks: "Tasks",
+	calendar: "Mini calendar",
+	stats: "Vault statistics",
 };
 
 const LINK_TYPE_LABELS: Record<LinkItem["type"], string> = {
@@ -215,6 +218,9 @@ export class CardSettingsModal extends Modal {
 			case "clock":
 				this.clockEditor(containerEl);
 				break;
+			case "tasks":
+				this.tasksEditor(containerEl);
+				break;
 		}
 	}
 
@@ -389,6 +395,75 @@ export class CardSettingsModal extends Modal {
 				}).open();
 			}),
 		);
+	}
+
+	private tasksEditor(containerEl: HTMLElement): void {
+		const cfg = (this.card.tasks ??= {});
+
+		new Setting(containerEl)
+			.setName("Source")
+			.setDesc(
+				"Markdown checkboxes work anywhere. TaskNotes reads that plugin's " +
+					"task notes via frontmatter (field names configurable in Settings → " +
+					"Hearth, since TaskNotes has no API for other plugins to query it).",
+			)
+			.addDropdown((d) => {
+				d.addOption("checkbox", "Markdown checkboxes");
+				d.addOption("tasknotes", "TaskNotes plugin");
+				d.setValue(cfg.source ?? "checkbox").onChange((v) => {
+					cfg.source = v as TasksConfig["source"];
+					this.opts.save();
+				});
+			});
+
+		new Setting(containerEl)
+			.setName("Show completed")
+			.addToggle((t) =>
+				t.setValue(cfg.showCompleted ?? false).onChange((v) => {
+					cfg.showCompleted = v || undefined;
+					this.opts.save();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName("Max tasks shown")
+			.setDesc("Sorted by due date (overdue/soonest first), then by file.")
+			.addText((t) => {
+				t.setValue(String(cfg.count ?? 10)).onChange((v) => {
+					const n = parseInt(v, 10);
+					cfg.count = Number.isNaN(n) || n <= 0 ? undefined : n;
+					this.opts.save();
+				});
+				t.inputEl.type = "number";
+				t.inputEl.addClass("hearth-count-input");
+			});
+
+		new Setting(containerEl).setName("Folders").setHeading();
+		new Setting(containerEl).setName("Scope").addDropdown((d) => {
+			d.addOption("all", "Whole vault");
+			d.addOption("whitelist", "Only these folders");
+			d.addOption("blacklist", "Everywhere except these folders");
+			d.setValue(cfg.folderScope ?? "all").onChange((v) => {
+				cfg.folderScope = v as TasksConfig["folderScope"];
+				this.opts.save();
+				this.render();
+			});
+		});
+
+		if ((cfg.folderScope ?? "all") !== "all") {
+			new Setting(containerEl)
+				.setDesc("One folder path per line.")
+				.addTextArea((t) => {
+					t.setValue((cfg.folders ?? []).join("\n")).onChange((v) => {
+						cfg.folders = v
+							.split("\n")
+							.map((s) => s.trim())
+							.filter(Boolean);
+						this.opts.save();
+					});
+					t.inputEl.rows = 3;
+				});
+		}
 	}
 
 	private favoritesEditor(containerEl: HTMLElement): void {

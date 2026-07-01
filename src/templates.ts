@@ -90,6 +90,12 @@ export const CARD_TEMPLATES: CardTemplate[] = [
 		build: () => ({ kind: "clock", title: "", w: 4, h: 2 }),
 	},
 	{
+		id: "tasks",
+		name: "Tasks",
+		icon: "list-todo",
+		build: () => ({ kind: "tasks", title: "Tasks", tasks: {}, w: 4, h: 4 }),
+	},
+	{
 		id: "text",
 		name: "Text / jot-down",
 		icon: "pencil",

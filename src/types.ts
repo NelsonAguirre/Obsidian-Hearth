@@ -9,7 +9,10 @@ export type CardKind =
 	| "recent"
 	| "links"
 	| "commands"
-	| "clock";
+	| "clock"
+	| "tasks"
+	| "calendar"
+	| "stats";
 
 /** A single command tile inside a "commands" card. */
 export interface CommandItem {
@@ -19,6 +22,23 @@ export interface CommandItem {
 	name: string;
 	/** Optional Lucide icon id; falls back to a generic command icon. */
 	icon?: string;
+}
+
+/** Per-card configuration for a "tasks" card. */
+export interface TasksConfig {
+	/** "checkbox" (default) scans plain Markdown `- [ ]` checkboxes anywhere
+	 * in scope. "tasknotes" reads frontmatter from the TaskNotes community
+	 * plugin's task notes instead, using the field-name mapping configured in
+	 * Settings → Hearth (TaskNotes has no stable public API to query, so this
+	 * reads its files the same way TaskNotes itself does: frontmatter). */
+	source?: "checkbox" | "tasknotes";
+	/** How `folders` is applied. "all" (default) scans the whole vault. */
+	folderScope?: "all" | "whitelist" | "blacklist";
+	folders?: string[];
+	/** Include already-completed tasks. Default false (hide done). */
+	showCompleted?: boolean;
+	/** Max tasks shown, soonest/overdue due date first. Default 10. */
+	count?: number;
 }
 
 /** Per-card configuration for a "clock" card. All fields are optional; omitted
@@ -86,6 +106,8 @@ export interface DashboardCard {
 	count?: number;
 	/** kind === "clock": time/greeting/date display options. */
 	clock?: ClockConfig;
+	/** kind === "tasks": source, folder scope and display options. */
+	tasks?: TasksConfig;
 
 	// ---- Live content ----
 	/** Auto-refresh interval in seconds for live content (embed / web). 0 or
@@ -203,6 +225,16 @@ export interface HomeSettings {
 	/** Fit the dashboard to one screen (no scroll) vs. allow scrolling. */
 	fitToPage: boolean;
 
+	// ---- Tasks / TaskNotes ----
+	/** Frontmatter property names read by "tasks" cards in TaskNotes mode.
+	 * TaskNotes has no stable API for other plugins, and its own field names
+	 * are user-remappable, so these mirror its defaults and can be adjusted
+	 * to match whatever the vault has them set to. */
+	taskNotesStatusField: string;
+	taskNotesDueField: string;
+	/** The status value that counts as "done". */
+	taskNotesDoneValue: string;
+
 	// ---- Layout ----
 	maxWidth: number;
 }
@@ -241,6 +273,10 @@ export const DEFAULT_SETTINGS: HomeSettings = {
 	rowHeight: 92,
 	favorites: [],
 	fitToPage: false,
+
+	taskNotesStatusField: "status",
+	taskNotesDueField: "due",
+	taskNotesDoneValue: "done",
 
 	maxWidth: 1100,
 };

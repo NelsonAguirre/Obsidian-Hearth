@@ -34,6 +34,7 @@ export class HomeSettingTab extends PluginSettingTab {
 		this.backgroundSection(containerEl);
 		this.behaviourSection(containerEl);
 		this.mobileActionsSection(containerEl);
+		this.tasksSection(containerEl);
 		this.filtersSection(containerEl);
 		this.dashboardSection(containerEl);
 		this.layoutSection(containerEl);
@@ -335,6 +336,48 @@ export class HomeSettingTab extends PluginSettingTab {
 		arr.splice(to, 0, item);
 		void this.save();
 		this.display();
+	}
+
+	// ---- Tasks / TaskNotes ------------------------------------------------
+
+	private tasksSection(containerEl: HTMLElement): void {
+		new Setting(containerEl)
+			.setName("Tasks / TaskNotes")
+			.setDesc(
+				"Field names read by Tasks cards in TaskNotes mode. TaskNotes has no " +
+					"stable API for other plugins, so this reads its frontmatter directly " +
+					"— match these to whatever TaskNotes' own settings have them mapped to " +
+					"(the defaults below are TaskNotes' own defaults).",
+			)
+			.setHeading();
+		const s = this.plugin.settings;
+
+		new Setting(containerEl)
+			.setName("Status field")
+			.addText((t) =>
+				t.setValue(s.taskNotesStatusField).onChange(async (v) => {
+					s.taskNotesStatusField = v;
+					await this.save();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName("Due date field")
+			.addText((t) =>
+				t.setValue(s.taskNotesDueField).onChange(async (v) => {
+					s.taskNotesDueField = v;
+					await this.save();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName("“Done” status value")
+			.addText((t) =>
+				t.setValue(s.taskNotesDoneValue).onChange(async (v) => {
+					s.taskNotesDoneValue = v;
+					await this.save();
+				}),
+			);
 	}
 
 	// ---- Filters --------------------------------------------------------
