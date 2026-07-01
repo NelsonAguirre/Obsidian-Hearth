@@ -132,6 +132,15 @@ function renderEmbed(
 		// Images, canvas, .base and Excalidraw go through Obsidian's own
 		// transclusion embed, which handles those file types uniformly.
 		void MarkdownRenderer.render(view.app, `![[${target}]]`, host, target, component);
+
+		// Canvas and Excalidraw embeds are natively interactive (pan/zoom, and
+		// their own in-place edit toggle) — let them fill the card edge-to-edge
+		// instead of sitting in a small box inside a scrolling body, so their
+		// own pan gestures don't fight the card's scrollbar.
+		if (ext === "canvas" || excalidraw) {
+			host.addClass("hearth-embed-live");
+			body.addClass("hearth-card-body-live");
+		}
 	}
 }
 
