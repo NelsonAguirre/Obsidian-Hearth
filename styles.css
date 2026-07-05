@@ -232,11 +232,21 @@
 	font-size: 0.78rem;
 }
 
+/* Matched characters in a result name (fuzzy search highlight). */
+.hearth-result-mark {
+	background: transparent;
+	color: var(--interactive-accent);
+	font-weight: 700;
+}
+
 /* Shown on tag/property-search hits instead of the folder path, so it's
  * visible what actually matched. */
 .hearth-result-badge {
 	color: var(--interactive-accent);
 	font-size: 0.78rem;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .hearth-search-empty {

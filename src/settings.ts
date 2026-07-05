@@ -96,6 +96,19 @@ export class HomeSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
+			.setName("Search note contents")
+			.setDesc(
+				"Also match text inside note bodies, not just names, tags and " +
+					"properties. Body matches appear after name matches with a snippet.",
+			)
+			.addToggle((t) =>
+				t.setValue(s.searchContents).onChange(async (v) => {
+					s.searchContents = v;
+					await this.save();
+				}),
+			);
+
+		new Setting(containerEl)
 			.setName("Show “New note” button")
 			.addToggle((t) =>
 				t.setValue(s.showNewNoteButton).onChange(async (v) => {

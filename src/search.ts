@@ -1,56 +1,31 @@
-import {
-	Component,
-	debounce,
-	getAllTags,
-	Platform,
-	prepareFuzzySearch,
-	setIcon,
-	TAbstractFile,
-	TFile,
-	TFolder,
-} from "obsidian";
+import { Command, Component, debounce, Platform, setIcon, TAbstractFile, TFile, TFolder } from "obsidian";
 import type { HomeView } from "./view";
-import {
-	FILE_TYPE_GROUPS,
-	FileTypeGroup,
-	groupForFile,
-	iconForFile,
-} from "./filetypes";
+import { FILE_TYPE_GROUPS, FileTypeGroup, groupForFile, iconForFile } from "./filetypes";
+import { QueryHit, runQuery, searchFileContents } from "./query";
 
-interface SearchHit {
-	file: TAbstractFile;
-	score: number;
-	/** Set when this hit matched via a tag or frontmatter property, not its
-	 * name/path — shown instead of the folder path so it's obvious why it's
-	 * in the results, and picks the result's icon. */
-	badge?: { icon: string; label: string };
-}
+/** A rendered result: either a vault file/folder hit or a command to run. */
+type ResultRow =
+	| { kind: "file"; hit: QueryHit }
+	| { kind: "command"; command: Command };
 
-/** Property keys are matched as plain identifiers (letters/digits/_/-)
- * followed by a colon — a shape real file names can't take (":" isn't a
- * legal filename character on Windows/macOS), so it never collides with a
- * name search. */
-const PROPERTY_QUERY = /^([a-zA-Z0-9_-]+)\s*:\s*(.*)$/;
-
-const MAX_RESULTS = 40;
-
-/** Stringify a frontmatter value for display/matching (arrays are handled by
- * the caller, one element at a time). */
-function formatPropertyValue(v: unknown): string {
-	if (v == null) return "";
-	if (typeof v === "object") return JSON.stringify(v);
-	return String(v);
-}
 /** Recently opened-via-search files, kept in the vault's local storage (never
  * in settings/data.json) so it stays out of the settings UI and layout
  * export entirely — a quiet convenience, not a feature to configure. */
 const HISTORY_KEY = "hearth-search-history";
 const HISTORY_MAX = 6;
 
+const MAX_RESULTS = 40;
+/** A leading ">" switches the bar to command mode (run any command). */
+const COMMAND_PREFIX = ">";
+
+let resultsIdSeq = 0;
+
 /**
  * The search field + auto-detected file-type filter chips + results dropdown.
  * Searches the whole vault (Obsidian's vault index already excludes the
- * .obsidian config folder).
+ * .obsidian config folder). A leading "#" searches tags, "key:value" searches
+ * frontmatter, ">" runs commands; otherwise names/paths (and, optionally, note
+ * bodies) are matched.
  */
 export class SearchSection {
 	private view: HomeView;
@@ -58,11 +33,15 @@ export class SearchSection {
 
 	private inputEl!: HTMLInputElement;
 	private resultsEl!: HTMLElement;
+	private resultsId = `hearth-results-${resultsIdSeq++}`;
 	/** The whole search section (bar + results + filters) — used to decide when
 	 * a click counts as "outside" and should close the dropdown. */
 	private rootEl: HTMLElement | null = null;
 	private rows: { el: HTMLElement; open: () => void }[] = [];
 	private selected = -1;
+	/** Bumped on every query so a slow async content search can't render results
+	 * for a query the user has already moved on from. */
+	private generation = 0;
 
 	constructor(view: HomeView) {
 		this.view = view;
@@ -83,6 +62,10 @@ export class SearchSection {
 				type: "text",
 				placeholder: this.view.plugin.settings.searchPlaceholder || "Search the vault",
 				spellcheck: "false",
+				role: "combobox",
+				"aria-expanded": "false",
+				"aria-autocomplete": "list",
+				"aria-controls": this.resultsId,
 			},
 		});
 
@@ -105,6 +88,7 @@ export class SearchSection {
 	): void {
 		this.rootEl = boundary;
 		this.resultsEl = overlayParent.createDiv("hearth-search-results");
+		this.resultsEl.id = this.resultsId;
 		this.resultsEl.setAttribute("role", "listbox");
 		this.resultsEl.hide();
 		this.renderFilters(boundary);
@@ -149,16 +133,29 @@ export class SearchSection {
 			chip.toggleClass("is-active", this.activeFilter === group.id);
 			setIcon(chip.createDiv("hearth-filter-icon"), group.icon);
 			chip.setAttribute("aria-label", group.label);
-			chip.addEventListener("click", () => {
+			chip.setAttribute("role", "button");
+			chip.setAttribute("tabindex", "0");
+			chip.setAttribute("aria-pressed", String(this.activeFilter === group.id));
+			const toggle = () => {
 				this.activeFilter = this.activeFilter === group.id ? null : group.id;
-				parent
-					.querySelectorAll(".hearth-filter")
-					.forEach((c) => c.removeClass("is-active"));
-				chip.toggleClass("is-active", this.activeFilter === group.id);
+				parent.querySelectorAll(".hearth-filter").forEach((c) => {
+					c.removeClass("is-active");
+					c.setAttribute("aria-pressed", "false");
+				});
+				const on = this.activeFilter === group.id;
+				chip.toggleClass("is-active", on);
+				chip.setAttribute("aria-pressed", String(on));
 				this.update();
 				// On desktop, refocus the field for quick typing; on mobile this
 				// would pop the on-screen keyboard and cover the results, so skip.
 				if (!Platform.isMobile) this.inputEl.focus();
+			};
+			chip.addEventListener("click", toggle);
+			chip.addEventListener("keydown", (e) => {
+				if (e.key === "Enter" || e.key === " ") {
+					e.preventDefault();
+					toggle();
+				}
 			});
 		}
 	}
@@ -166,12 +163,45 @@ export class SearchSection {
 	// ---- Searching ------------------------------------------------------
 
 	private update(): void {
-		const query = this.inputEl.value.trim();
+		const raw = this.inputEl.value;
+		const query = raw.trim();
+		this.generation++;
+
+		// Command mode: a leading ">" runs any command-palette command.
+		if (query.startsWith(COMMAND_PREFIX)) {
+			this.renderCommandRows(this.searchCommands(query.slice(1).trim()));
+			return;
+		}
+
 		if (!query && !this.activeFilter) {
 			this.renderHistory();
 			return;
 		}
-		this.renderResults(this.search(query));
+
+		const hits = runQuery(this.view.app, query, {
+			filter: {
+				includeFolders: !this.activeFilter || this.activeFilter === "folders",
+				includeFiles: this.activeFilter !== "folders",
+				groupId: this.activeFilter && this.activeFilter !== "folders" ? this.activeFilter : null,
+			},
+			limit: MAX_RESULTS,
+		});
+		this.renderFileRows(hits);
+
+		// Full-text body search runs after the instant name results and appends
+		// any note whose body matched but whose name didn't. Guarded by generation
+		// so a stale async result never overwrites a newer query's results.
+		if (this.view.plugin.settings.searchContents && query && !this.activeFilter) {
+			const gen = this.generation;
+			const exclude = new Set(hits.map((h) => h.file.path));
+			void searchFileContents(this.view.app, query, {
+				exclude,
+				limit: Math.max(0, MAX_RESULTS - hits.length),
+			}).then((extra) => {
+				if (gen !== this.generation || extra.length === 0) return;
+				this.renderFileRows([...hits, ...extra]);
+			});
+		}
 	}
 
 	/** With nothing typed, quietly offer recently opened files instead of an
@@ -185,7 +215,7 @@ export class SearchSection {
 			this.hide();
 			return;
 		}
-		this.renderResults(files.map((file) => ({ file, score: 0 })));
+		this.renderFileRows(files.map((file) => ({ file, score: 0 })));
 	}
 
 	private getHistory(): string[] {
@@ -198,114 +228,37 @@ export class SearchSection {
 		this.view.app.saveLocalStorage(HISTORY_KEY, next);
 	}
 
-	private search(query: string): SearchHit[] {
-		// A leading "#" switches to tag search, and "key:value" switches to
-		// frontmatter property search — both deliberately distinct modes (not
-		// silently mixed into name search) so it's always clear what matched.
-		if (query.startsWith("#")) return this.searchByTag(query.slice(1));
-		const propertyQuery = PROPERTY_QUERY.exec(query);
-		if (propertyQuery) return this.searchByProperty(propertyQuery[1], propertyQuery[2]);
-
-		const filter = this.activeFilter;
-		const includeFolders = !filter || filter === "folders";
-		const includeFiles = filter !== "folders";
-
-		const candidates: TAbstractFile[] = [];
-		for (const f of this.view.app.vault.getAllLoadedFiles()) {
-			if (f instanceof TFolder) {
-				if (includeFolders && f.path !== "/") candidates.push(f);
-				continue;
-			}
-			if (!includeFiles) continue;
-			if (filter && filter !== "folders") {
-				if (groupForFile(f)?.id !== filter) continue;
-			}
-			candidates.push(f);
-		}
-
-		if (!query) {
-			return candidates
-				.sort((a, b) => a.name.localeCompare(b.name))
-				.slice(0, MAX_RESULTS)
-				.map((file) => ({ file, score: 0 }));
-		}
-
-		const fuzzy = prepareFuzzySearch(query);
-		const hits: SearchHit[] = [];
-		for (const file of candidates) {
-			const match = fuzzy(file.name) ?? fuzzy(file.path);
-			if (match) hits.push({ file, score: match.score });
-		}
-		hits.sort((a, b) => b.score - a.score);
-		return hits.slice(0, MAX_RESULTS);
-	}
-
-	/** Tag search (query has had its leading "#" stripped). Matches vault tags
-	 * themselves, not file names — an empty query after "#" browses every
-	 * tagged file. Ignores the file-type filter chips, which don't apply to
-	 * tags across file types. */
-	private searchByTag(raw: string): SearchHit[] {
-		const q = raw.trim().toLowerCase();
-		const hits: SearchHit[] = [];
-		for (const file of this.view.app.vault.getMarkdownFiles()) {
-			const cache = this.view.app.metadataCache.getFileCache(file);
-			if (!cache) continue;
-			const tags = getAllTags(cache);
-			if (!tags || tags.length === 0) continue;
-			const matched = q ? tags.find((t) => t.slice(1).toLowerCase().includes(q)) : tags[0];
-			if (matched) hits.push({ file, score: 0, badge: { icon: "tag", label: matched } });
-		}
-		hits.sort((a, b) => a.file.name.localeCompare(b.file.name));
-		return hits.slice(0, MAX_RESULTS);
-	}
-
-	/** Frontmatter property search ("key" and "value" already split on the
-	 * first ":"). The key matches exactly (case-insensitive) — property names
-	 * are structured identifiers, not fuzzy text — and an empty value browses
-	 * every file that has the property set at all, mirroring tag search. */
-	private searchByProperty(key: string, rawValue: string): SearchHit[] {
-		const value = rawValue.trim().toLowerCase();
-		const hits: SearchHit[] = [];
-		for (const file of this.view.app.vault.getMarkdownFiles()) {
-			const fm = this.view.app.metadataCache.getFileCache(file)?.frontmatter;
-			if (!fm) continue;
-			const actualKey = Object.keys(fm).find((k) => k.toLowerCase() === key.toLowerCase());
-			if (!actualKey || fm[actualKey] == null) continue;
-
-			const values: unknown[] = Array.isArray(fm[actualKey]) ? fm[actualKey] : [fm[actualKey]];
-			const matched = value
-				? values.find((v) => formatPropertyValue(v).toLowerCase().includes(value))
-				: values[0];
-			if (matched === undefined) continue;
-			hits.push({ file, score: 0, badge: { icon: "list", label: `${actualKey}: ${formatPropertyValue(matched)}` } });
-		}
-		hits.sort((a, b) => a.file.name.localeCompare(b.file.name));
-		return hits.slice(0, MAX_RESULTS);
+	private searchCommands(query: string): Command[] {
+		const commands = this.view.app.commands.listCommands();
+		if (!query) return commands.slice(0, MAX_RESULTS);
+		const q = query.toLowerCase();
+		return commands
+			.filter((c) => c.name.toLowerCase().includes(q))
+			.slice(0, MAX_RESULTS);
 	}
 
 	// ---- Results rendering ---------------------------------------------
 
-	private renderResults(hits: SearchHit[]): void {
+	private beginResults(): void {
 		this.resultsEl.empty();
 		this.rows = [];
 		this.selected = -1;
+		this.inputEl.removeAttribute("aria-activedescendant");
+	}
 
+	private renderFileRows(hits: QueryHit[]): void {
+		this.beginResults();
 		if (hits.length === 0) {
-			this.resultsEl.createDiv("hearth-search-empty").setText("No matches");
-			this.resultsEl.show();
+			this.showEmpty();
 			return;
 		}
-
-		hits.forEach((hit) => {
-			const row = this.resultsEl.createDiv("hearth-result");
-			setIcon(row.createDiv("hearth-result-icon"), hit.badge?.icon ?? iconForFile(hit.file));
-
+		hits.forEach((hit, i) => {
+			const row = this.newRow(i, hit.badge?.icon ?? iconForFile(hit.file));
 			const text = row.createDiv("hearth-result-text");
-			const name =
-				hit.file instanceof TFile ? hit.file.basename : hit.file.name;
-			text.createDiv("hearth-result-name").setText(name || "/");
-			// Tag/property hits show what actually matched instead of the folder
-			// path — the point of the badge is to make the match reason visible.
+			const name = hit.file instanceof TFile ? hit.file.basename : hit.file.name;
+			this.renderName(text.createDiv("hearth-result-name"), name || "/", hit.matches);
+			// Tag/property/body hits show what actually matched instead of the
+			// folder path — the badge makes the match reason visible.
 			if (hit.badge) {
 				text.createDiv({ cls: "hearth-result-badge", text: hit.badge.label });
 			} else {
@@ -314,13 +267,66 @@ export class SearchSection {
 					text.createDiv("hearth-result-path").setText(parentPath);
 				}
 			}
-
-			const open = () => this.openFile(hit.file);
-			row.addEventListener("click", open);
-			this.rows.push({ el: row, open });
+			this.commitRow(row, () => this.openFile(hit.file));
 		});
+		this.finishResults();
+	}
 
+	private renderCommandRows(commands: Command[]): void {
+		this.beginResults();
+		if (commands.length === 0) {
+			this.showEmpty("No matching commands");
+			return;
+		}
+		commands.forEach((command, i) => {
+			const row = this.newRow(i, "terminal-square");
+			row.createDiv("hearth-result-text").createDiv("hearth-result-name").setText(command.name);
+			this.commitRow(row, () => {
+				this.hide();
+				this.view.app.commands.executeCommandById(command.id);
+			});
+		});
+		this.finishResults();
+	}
+
+	private newRow(index: number, icon: string): HTMLElement {
+		const row = this.resultsEl.createDiv("hearth-result");
+		row.id = `${this.resultsId}-opt-${index}`;
+		row.setAttribute("role", "option");
+		row.setAttribute("aria-selected", "false");
+		setIcon(row.createDiv("hearth-result-icon"), icon);
+		return row;
+	}
+
+	private commitRow(row: HTMLElement, open: () => void): void {
+		row.addEventListener("click", open);
+		this.rows.push({ el: row, open });
+	}
+
+	/** Render `name` with matched character ranges wrapped in <mark>. */
+	private renderName(el: HTMLElement, name: string, matches?: [number, number][]): void {
+		if (!matches || matches.length === 0) {
+			el.setText(name);
+			return;
+		}
+		let cursor = 0;
+		for (const [start, end] of matches) {
+			if (start > cursor) el.appendText(name.slice(cursor, start));
+			el.createEl("mark", { cls: "hearth-result-mark", text: name.slice(start, end) });
+			cursor = end;
+		}
+		if (cursor < name.length) el.appendText(name.slice(cursor));
+	}
+
+	private showEmpty(text = "No matches"): void {
+		this.resultsEl.createDiv("hearth-search-empty").setText(text);
 		this.resultsEl.show();
+		this.inputEl.setAttribute("aria-expanded", "true");
+	}
+
+	private finishResults(): void {
+		this.resultsEl.show();
+		this.inputEl.setAttribute("aria-expanded", "true");
 	}
 
 	private onKeyDown(e: KeyboardEvent): void {
@@ -345,11 +351,19 @@ export class SearchSection {
 	}
 
 	private move(delta: number): void {
-		this.rows[this.selected]?.el.removeClass("is-selected");
+		const prev = this.rows[this.selected]?.el;
+		if (prev) {
+			prev.removeClass("is-selected");
+			prev.setAttribute("aria-selected", "false");
+		}
 		this.selected = (this.selected + delta + this.rows.length) % this.rows.length;
 		const row = this.rows[this.selected]?.el;
-		row?.addClass("is-selected");
-		row?.scrollIntoView({ block: "nearest" });
+		if (row) {
+			row.addClass("is-selected");
+			row.setAttribute("aria-selected", "true");
+			row.scrollIntoView({ block: "nearest" });
+			this.inputEl.setAttribute("aria-activedescendant", row.id);
+		}
 	}
 
 	private openFile(file: TAbstractFile): void {
@@ -370,5 +384,7 @@ export class SearchSection {
 
 	private hide(): void {
 		if (this.resultsEl) this.resultsEl.hide();
+		this.inputEl?.setAttribute("aria-expanded", "false");
+		this.inputEl?.removeAttribute("aria-activedescendant");
 	}
 }

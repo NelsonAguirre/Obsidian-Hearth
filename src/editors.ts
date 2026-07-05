@@ -231,7 +231,40 @@ export class CardSettingsModal extends Modal {
 			case "tasks":
 				this.tasksEditor(containerEl);
 				break;
+			case "search":
+				this.savedSearchEditor(containerEl);
+				break;
 		}
+	}
+
+	private savedSearchEditor(containerEl: HTMLElement): void {
+		const cfg = (this.card.savedSearch ??= {});
+		new Setting(containerEl)
+			.setName("Query")
+			.setDesc(
+				"Same syntax as the search bar: plain text for names/bodies, #tag for " +
+					"tags, or key:value for a frontmatter property.",
+			)
+			.addText((t) =>
+				t
+					.setPlaceholder("#project or status:active or meeting notes")
+					.setValue(cfg.query ?? "")
+					.onChange((v) => {
+						cfg.query = v;
+						this.opts.save();
+					}),
+			);
+		new Setting(containerEl)
+			.setName("Max results")
+			.addText((t) => {
+				t.setValue(String(cfg.count ?? 12)).onChange((v) => {
+					const n = parseInt(v, 10);
+					cfg.count = Number.isNaN(n) || n <= 0 ? undefined : n;
+					this.opts.save();
+				});
+				t.inputEl.type = "number";
+				t.inputEl.addClass("hearth-count-input");
+			});
 	}
 
 	/** Move an item within a list, then persist and re-render the editor. */

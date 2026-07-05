@@ -14,6 +14,8 @@ import type { HomeView } from "./view";
 import type { BookmarkItem } from "./obsidian-ext";
 import { ClockConfig, CommandItem, DashboardCard, LinkItem, TasksConfig } from "./types";
 import { EXCALIDRAW_PLUGIN_ID, iconForFile, isExcalidraw } from "./filetypes";
+import { QueryHit, runQuery, searchFileContents } from "./query";
+import { makeClickable } from "./ui";
 
 /**
  * moment is bundled with Obsidian, not a direct dependency, so it's imported
@@ -92,6 +94,54 @@ export function renderCardBody(
 		case "stats":
 			renderStats(view, body);
 			break;
+		case "search":
+			renderSavedSearch(view, card, body);
+			break;
+	}
+}
+
+// ---- Saved search --------------------------------------------------------
+
+/** A card that runs a saved query (same syntax as the top search bar) and lists
+ * the matching files, refreshed on every render. */
+function renderSavedSearch(view: HomeView, card: DashboardCard, body: HTMLElement): void {
+	const cfg = card.savedSearch ?? {};
+	const query = (cfg.query ?? "").trim();
+	if (!query) {
+		emptyState(body, "search", "Set a query in card settings");
+		return;
+	}
+	const limit = cfg.count && cfg.count > 0 ? cfg.count : 12;
+	const list = body.createDiv("hearth-list");
+
+	const render = (hits: QueryHit[]) => {
+		list.empty();
+		if (hits.length === 0) {
+			emptyState(list, "search-x", "No matches");
+			return;
+		}
+		for (const hit of hits.slice(0, limit)) {
+			const row = list.createDiv("hearth-list-item");
+			setIcon(row.createDiv("hearth-list-icon"), hit.badge?.icon ?? iconForFile(hit.file));
+			const name = hit.file instanceof TFile ? hit.file.basename : hit.file.name;
+			row.createDiv({ cls: "hearth-list-label", text: name });
+			if (hit.badge) row.createDiv({ cls: "hearth-task-status", text: hit.badge.label });
+			const open = () => {
+				if (hit.file instanceof TFile) void view.app.workspace.getLeaf(true).openFile(hit.file);
+			};
+			row.addEventListener("click", open);
+			makeClickable(row, open, name);
+		}
+	};
+
+	const hits = runQuery(view.app, query, { limit });
+	render(hits);
+	// Append full-text body matches when enabled (self-guards to name queries).
+	if (view.plugin.settings.searchContents) {
+		const exclude = new Set(hits.map((h) => h.file.path));
+		void searchFileContents(view.app, query, { exclude, limit }).then((extra) => {
+			if (extra.length) render([...hits, ...extra]);
+		});
 	}
 }
 
