@@ -24,7 +24,12 @@ export interface CommandItem {
 	name: string;
 	/** Optional Lucide icon id; falls back to a generic command icon. */
 	icon?: string;
-	/** Optional per-tile pixel size, overriding the card's default tile size. */
+	/** Optional per-tile width in pixels, overriding the card's default. */
+	sizeW?: number;
+	/** Optional per-tile height in pixels, overriding the card's default. */
+	sizeH?: number;
+	/** Legacy single per-tile pixel size (drove width and height together).
+	 * Migrated to sizeW/sizeH on first read; new code writes those instead. */
 	size?: number;
 }
 
@@ -122,7 +127,12 @@ export interface LinkItem {
 	/** Vault path, URL, or command id depending on type. */
 	target: string;
 	type: "note" | "url" | "command";
-	/** Optional per-tile pixel size, overriding the card's default tile size. */
+	/** Optional per-tile width in pixels, overriding the card's default. */
+	sizeW?: number;
+	/** Optional per-tile height in pixels, overriding the card's default. */
+	sizeH?: number;
+	/** Legacy single per-tile pixel size (drove width and height together).
+	 * Migrated to sizeW/sizeH on first read; new code writes those instead. */
 	size?: number;
 }
 

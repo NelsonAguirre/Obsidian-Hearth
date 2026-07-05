@@ -1078,43 +1078,67 @@ function renderLinks(view: HomeView, card: DashboardCard, body: HTMLElement): vo
 	grid.style.setProperty("--hearth-tile", `${baseTile}px`);
 	for (const link of links) {
 		const tile = grid.createDiv("hearth-link-tile");
-		applyTileSize(tile, link.size, baseTile);
+		applyTileSize(tile, link.sizeW, link.sizeH, link.size, baseTile);
 		setIcon(tile.createDiv("hearth-link-icon"), link.icon || "link");
 		tile.createDiv({ cls: "hearth-link-label", text: link.label || link.target });
 		const open = () => openLink(view, link);
 		tile.addEventListener("click", open);
 		makeClickable(tile, open, link.label || link.target);
 
-		// Drag the corner handle to resize this individual tile.
-		makeTileResizable(view, tile, baseTile, () => link.size, (v) => {
-			link.size = v;
-		});
+		// Tiles can only be resized while the dashboard is in arrange mode.
+		if (view.arrangeMode) {
+			makeTileResizable(view, tile, baseTile, () => link.sizeW, (v) => {
+				link.sizeW = v;
+			}, () => link.sizeH, (v) => {
+				link.sizeH = v;
+			}, () => link.size, (v) => {
+				link.size = v;
+			});
+		}
 	}
 }
 
-/** Apply a per-tile pixel size: sets the tile's own --hearth-tile and, when
+/** Apply a per-tile pixel size: sets the tile's own --hearth-tile-w/h and, when
  * larger than the base, makes it span proportionally more grid columns. */
-function applyTileSize(tile: HTMLElement, size: number | undefined, baseTile: number): void {
-	if (size && size > 0) {
-		tile.style.setProperty("--hearth-tile", `${size}px`);
-		const span = Math.max(1, Math.round(size / baseTile));
+function applyTileSize(
+	tile: HTMLElement,
+	sizeW: number | undefined,
+	sizeH: number | undefined,
+	legacySize: number | undefined,
+	baseTile: number,
+): void {
+	// Migrate a legacy single `size` into independent width/height on read.
+	const w = sizeW ?? legacySize;
+	const h = sizeH ?? legacySize;
+	if (w && w > 0) {
+		tile.style.setProperty("--hearth-tile-w", `${w}px`);
+		const span = Math.max(1, Math.round(w / baseTile));
 		if (span > 1) tile.style.gridColumn = `span ${span}`;
 	}
+	if (h && h > 0) {
+		tile.style.setProperty("--hearth-tile-h", `${h}px`);
+	}
 }
 
-/** Attach a drag-to-resize corner handle to a tile. `get`/`set` read and write
- * the stored per-tile size (undefined = fall back to the card's base size). */
+/** Attach a drag-to-resize corner handle to a tile. Width and height are
+ * adjusted independently (drag right grows width, drag down grows height). The
+ * legacy single `size` is cleared once independent sizes are written. */
 function makeTileResizable(
 	view: HomeView,
 	tile: HTMLElement,
 	baseTile: number,
-	get: () => number | undefined,
-	set: (size: number | undefined) => void,
+	getW: () => number | undefined,
+	setW: (size: number | undefined) => void,
+	getH: () => number | undefined,
+	setH: (size: number | undefined) => void,
+	getLegacy: () => number | undefined,
+	setLegacy: (size: number | undefined) => void,
 ): void {
 	const handle = tile.createDiv("hearth-tile-resize");
 	handle.setAttribute("aria-hidden", "true");
 	let resizing = false;
-	let startPx = 0;
+	let startW = 0;
+	let startH = 0;
 	let startX = 0;
 	let startY = 0;
 	handle.addEventListener("click", (e) => e.stopPropagation());
@@ -1122,18 +1146,29 @@ function makeTileResizable(
 		e.preventDefault();
 		e.stopPropagation();
 		resizing = true;
-		startPx = get() && get()! > 0 ? get()! : baseTile;
+		// Seed from legacy `size` (which used to drive both axes) so a tile
+		// resized before this split still starts from its stored footprint.
+		const legacy = getLegacy();
+		startW = getW() ?? legacy ?? baseTile;
+		if (legacy != null && getW() == null) setW(legacy);
+		startH = getH() ?? legacy ?? baseTile * 0.78;
+		if (legacy != null && getH() == null) setH(legacy);
 		startX = e.clientX;
 		startY = e.clientY;
 		handle.setPointerCapture(e.pointerId);
 	});
 	handle.addEventListener("pointermove", (e) => {
 		if (!resizing) return;
-		const delta = Math.max(e.clientX - startX, e.clientY - startY);
-		const size = Math.max(50, Math.min(360, Math.round((startPx + delta) / 5) * 5));
-		set(size === baseTile ? undefined : size);
-		tile.style.setProperty("--hearth-tile", `${size}px`);
-		const span = Math.max(1, Math.round(size / baseTile));
+		const dx = e.clientX - startX;
+		const dy = e.clientY - startY;
+		const w = Math.max(50, Math.min(360, Math.round((startW + dx) / 5) * 5));
+		const h = Math.max(44, Math.min(360, Math.round((startH + dy) / 5) * 5));
+		setW(w === baseTile ? undefined : w);
+		setH(h === Math.round(baseTile * 0.78) ? undefined : h);
+		setLegacy(undefined); // clear the legacy single size once split
+		tile.style.setProperty("--hearth-tile-w", `${w}px`);
+		tile.style.setProperty("--hearth-tile-h", `${h}px`);
+		const span = Math.max(1, Math.round(w / baseTile));
 		tile.style.gridColumn = span > 1 ? `span ${span}` : "";
 	});
 	const endResize = (e: PointerEvent) => {
@@ -1184,17 +1219,23 @@ function renderCommands(view: HomeView, card: DashboardCard, body: HTMLElement):
 		// A per-tile size overrides the card default: it drives the tile's own
 		// height/icon (via --hearth-tile) and, when larger than the base, makes
 		// the tile span proportionally more grid columns so it's wider too.
-		applyTileSize(tile, cmd.size, baseTile);
+		applyTileSize(tile, cmd.sizeW, cmd.sizeH, cmd.size, baseTile);
 		setIcon(tile.createDiv("hearth-link-icon"), cmd.icon || "terminal-square");
 		tile.createDiv({ cls: "hearth-link-label", text: cmd.name || cmd.id });
 		const run = () => runCommand(view, cmd);
 		tile.addEventListener("click", run);
 		makeClickable(tile, run, cmd.name || cmd.id);
 
-		// Drag the corner handle to resize this individual tile.
-		makeTileResizable(view, tile, baseTile, () => cmd.size, (v) => {
-			cmd.size = v;
-		});
+		// Tiles can only be resized while the dashboard is in arrange mode.
+		if (view.arrangeMode) {
+			makeTileResizable(view, tile, baseTile, () => cmd.sizeW, (v) => {
+				cmd.sizeW = v;
+			}, () => cmd.sizeH, (v) => {
+				cmd.sizeH = v;
+			}, () => cmd.size, (v) => {
+				cmd.size = v;
+			});
+		}
 	}
 }
 

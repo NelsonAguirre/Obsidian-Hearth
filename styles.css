@@ -727,18 +727,20 @@
 }
 
 /* Commands & links cards: tile size is driven by --hearth-tile (set per card),
- * scaling the column width, tile height and icon together. */
+ * scaling the column width, tile height and icon together. Per-tile overrides
+ * use --hearth-tile-w (width, drives column span) and --hearth-tile-h (min
+ * height) so a tile can be resized independently on each axis. */
 .hearth-tiles-sized {
 	grid-template-columns: repeat(auto-fill, minmax(var(--hearth-tile, 90px), 1fr));
 }
 
 .hearth-tiles-sized .hearth-link-tile {
-	min-height: calc(var(--hearth-tile, 90px) * 0.78);
+	min-height: var(--hearth-tile-h, calc(var(--hearth-tile, 90px) * 0.78));
 }
 
 .hearth-tiles-sized .hearth-link-icon .svg-icon {
-	width: calc(var(--hearth-tile, 90px) * 0.26);
-	height: calc(var(--hearth-tile, 90px) * 0.26);
+	width: calc(var(--hearth-tile-h, var(--hearth-tile, 90px)) * 0.26);
+	height: calc(var(--hearth-tile-h, var(--hearth-tile, 90px)) * 0.26);
 }
 
 .hearth-link-tile:hover {
@@ -1000,16 +1002,11 @@
 	gap: 8px;
 }
 
-/* While arranging the bar carries the Add card / Done actions, so keep it in
- * normal flow above the grid. */
-.hearth-toolbar.is-arranging {
-	margin-bottom: 12px;
-}
-
-/* At rest the bar holds only the compact Arrange toggle. Float it into the
- * gap above the grid so it no longer reserves a whole empty row, letting the
- * cards reclaim that space. */
-.hearth-toolbar:not(.is-arranging) {
+/* The toolbar always floats above the grid (anchored to the dashboard) so
+ * toggling arrange mode never shifts the board vertically — the Add card / Done
+ * arranging actions simply appear on the same row the compact Arrange toggle
+ * occupied at rest. */
+.hearth-toolbar {
 	position: absolute;
 	right: 0;
 	bottom: 100%;
@@ -1463,6 +1460,8 @@
 	flex-direction: column;
 	height: 100%;
 	min-height: 0;
+	/* Anchor the floating "new task" button. */
+	position: relative;
 }
 
 /* Let the list/kanban take the remaining height under the add-button row. */
@@ -1472,10 +1471,17 @@
 	min-height: 0;
 }
 
+/* The "new task" button floats over the board's top-right corner so it never
+ * reserves a row of its own. It's nearly invisible at rest and only fully
+ * reveals on hover. */
 .hearth-tasks-head {
+	position: absolute;
+	top: 4px;
+	right: 4px;
+	z-index: 4;
 	display: flex;
 	justify-content: flex-end;
-	margin-bottom: 6px;
+	pointer-events: none;
 }
 
 .hearth-task-add {
@@ -1486,11 +1492,18 @@
 	height: 24px;
 	padding: 0;
 	border-radius: 7px;
-	border: 1px solid var(--background-modifier-border);
-	background: var(--background-primary);
+	border: 1px solid transparent;
+	background: transparent;
 	color: var(--text-muted);
 	cursor: pointer;
-	opacity: 0.85;
+	opacity: 0;
+	pointer-events: auto;
+	transition: opacity 140ms ease, background 140ms ease, border-color 140ms ease;
+}
+
+.hearth-tasks-head:hover .hearth-task-add,
+.hearth-task-add:focus-visible {
+	opacity: 1;
 }
 
 .hearth-task-add:hover {
@@ -1766,6 +1779,8 @@
 	touch-action: none;
 }
 
-.hearth-link-tile:hover .hearth-tile-resize {
+/* Only show the per-tile resize grip while the board is in arrange mode, and
+   only on hover so it stays out of the way at rest. */
+.hearth-grid.is-arranging .hearth-link-tile:hover .hearth-tile-resize {
 	opacity: 0.7;
 }
