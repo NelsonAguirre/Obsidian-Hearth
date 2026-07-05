@@ -758,9 +758,13 @@
 
 /* Links / launchpad */
 .hearth-links {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+	/* Flex-wrap (not CSS grid) so each tile's width is independent: resizing
+	 * one tile never reflows the other on its row. Tiles wrap to the next line
+	 * like Android widgets. */
+	display: flex;
+	flex-wrap: wrap;
 	gap: 10px;
+	align-content: flex-start;
 }
 
 .hearth-link-tile {
@@ -769,25 +773,24 @@
 	align-items: center;
 	justify-content: center;
 	gap: 8px;
+	/* Default tile size (overridable per-tile via --hearth-tile-w/h). */
+	width: var(--hearth-tile, 90px);
+	min-height: var(--hearth-tile-h, calc(var(--hearth-tile, 90px) * 0.78));
 	padding: 14px 8px;
 	border-radius: 12px;
 	border: 1px solid var(--background-modifier-border);
 	background: var(--background-secondary);
 	cursor: pointer;
 	text-align: center;
-	transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+	transition: border-color 120ms ease, background 120ms ease, transform 120ms ease, box-shadow 120ms ease;
 }
 
 /* Commands & links cards: tile size is driven by --hearth-tile (set per card),
- * scaling the column width, tile height and icon together. Per-tile overrides
- * use --hearth-tile-w (width, drives column span) and --hearth-tile-h (min
- * height) so a tile can be resized independently on each axis. */
-.hearth-tiles-sized {
-	grid-template-columns: repeat(auto-fill, minmax(var(--hearth-tile, 90px), 1fr));
-}
-
+ * scaling the default width and icon. Per-tile overrides use --hearth-tile-w
+ * (width) and --hearth-tile-h (min height) so a tile can be resized
+ * independently on each axis without affecting its neighbours. */
 .hearth-tiles-sized .hearth-link-tile {
-	min-height: var(--hearth-tile-h, calc(var(--hearth-tile, 90px) * 0.78));
+	width: var(--hearth-tile-w, var(--hearth-tile, 90px));
 }
 
 .hearth-tiles-sized .hearth-link-icon .svg-icon {
@@ -805,6 +808,20 @@
 .hearth-grid.is-arranging .hearth-card.is-tile-card .hearth-link-tile {
 	position: relative;
 	z-index: 6;
+}
+
+/* While a tile is being dragged, lift it above its siblings and show a grab
+ * cursor + subtle shadow. */
+.hearth-link-tile.is-tile-dragging {
+	z-index: 15;
+	cursor: grabbing;
+	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+	opacity: 0.92;
+}
+
+/* In arrange mode, tiles show a grab cursor to signal they're repositionable. */
+.hearth-grid.is-arranging .hearth-link-tile {
+	cursor: grab;
 }
 
 .hearth-link-tile:hover {

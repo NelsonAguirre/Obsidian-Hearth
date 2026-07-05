@@ -1113,10 +1113,15 @@ function renderLinks(view: HomeView, card: DashboardCard, body: HTMLElement): vo
 		setIcon(tile.createDiv("hearth-link-icon"), link.icon || "link");
 		tile.createDiv({ cls: "hearth-link-label", text: link.label || link.target });
 		const open = () => openLink(view, link);
-		tile.addEventListener("click", open);
-		makeClickable(tile, open, link.label || link.target);
+		// In arrange mode, clicking a tile must NOT trigger its action — the
+		// click is almost always the tail end of a resize/drag gesture.
+		if (!view.arrangeMode) {
+			tile.addEventListener("click", open);
+			makeClickable(tile, open, link.label || link.target);
+		}
 
-		// Tiles can only be resized while the dashboard is in arrange mode.
+		// Tiles can only be resized/repositioned while the dashboard is in
+		// arrange mode.
 		if (view.arrangeMode) {
 			makeTileResizable(view, tile, baseTile, () => link.sizeW, (v) => {
 				link.sizeW = v;
@@ -1125,12 +1130,14 @@ function renderLinks(view: HomeView, card: DashboardCard, body: HTMLElement): vo
 			}, () => link.size, (v) => {
 				link.size = v;
 			});
+			makeTileDraggable(view, grid, tile, links, link);
 		}
 	}
 }
 
-/** Apply a per-tile pixel size: sets the tile's own --hearth-tile-w/h and, when
- * larger than the base, makes it span proportionally more grid columns. */
+/** Apply a per-tile pixel size: sets the tile's own width/height directly.
+ * Width is a fixed pixel value (not a grid column span), so resizing one tile
+ * never reflows the other tiles on its row — only that tile changes. */
 function applyTileSize(
 	tile: HTMLElement,
 	sizeW: number | undefined,
@@ -1141,14 +1148,8 @@ function applyTileSize(
 	// Migrate a legacy single `size` into independent width/height on read.
 	const w = sizeW ?? legacySize;
 	const h = sizeH ?? legacySize;
-	if (w && w > 0) {
-		tile.style.setProperty("--hearth-tile-w", `${w}px`);
-		const span = Math.max(1, Math.round(w / baseTile));
-		if (span > 1) tile.style.gridColumn = `span ${span}`;
-	}
-	if (h && h > 0) {
-		tile.style.setProperty("--hearth-tile-h", `${h}px`);
-	}
+	if (w && w > 0) tile.style.setProperty("--hearth-tile-w", `${w}px`);
+	if (h && h > 0) tile.style.setProperty("--hearth-tile-h", `${h}px`);
 }
 
 /** Fine grid (px) that tile sizes snap to, so tiles align like Android widgets. */
@@ -1213,8 +1214,6 @@ function makeTileResizable(
 		setLegacy(undefined);
 		tile.style.setProperty("--hearth-tile-w", `${w}px`);
 		tile.style.setProperty("--hearth-tile-h", `${h}px`);
-		const span = Math.max(1, Math.round(w / baseTile));
-		tile.style.gridColumn = span > 1 ? `span ${span}` : "";
 	});
 
 	const end = (e: PointerEvent) => {
@@ -1235,6 +1234,80 @@ function makeTileResizable(
 /** Snap a value to the nearest multiple of `grid`. */
 function snap(value: number, grid: number): number {
 	return Math.round(value / grid) * grid;
+}
+
+/** Make a tile draggable (to reorder it within its card) in arrange mode. Uses
+ *  pointer events (not HTML5 DnD) so it coexists with the resize handle and
+ *  doesn't trigger the card's drag engine. Swaps the tile's data item with its
+ *  neighbours as the pointer moves over them. */
+function makeTileDraggable<T extends { id: string }>(
+	view: HomeView,
+	container: HTMLElement,
+	tile: HTMLElement,
+	items: T[],
+	item: T,
+): void {
+	// A drag handle that covers the whole tile body (except the resize grip).
+	// The tile is grabbable anywhere in arrange mode.
+	let dragging = false;
+	let startX = 0;
+	let startY = 0;
+	let moved = false;
+	const DRAG_THRESHOLD = 4;
+
+	tile.addEventListener("pointerdown", (e) => {
+		// Don't start a tile drag from the resize handle.
+		if ((e.target as HTMLElement).closest(".hearth-tile-resize")) return;
+		e.stopPropagation(); // don't reach the card drag overlay
+		startX = e.clientX;
+		startY = e.clientY;
+		dragging = true;
+		moved = false;
+	});
+
+	tile.addEventListener("pointermove", (e) => {
+		if (!dragging) return;
+		const dx = e.clientX - startX;
+		const dy = e.clientY - startY;
+		if (!moved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+		if (!moved) {
+			moved = true;
+			tile.addClass("is-tile-dragging");
+			e.preventDefault();
+		}
+		e.stopPropagation();
+		// Find the tile under the pointer (not the dragged one).
+		tile.style.pointerEvents = "none";
+		const over = container.ownerDocument.elementFromPoint(e.clientX, e.clientY);
+		tile.style.pointerEvents = "";
+		const target = over?.closest(".hearth-link-tile") as HTMLElement | null;
+		if (target && target !== tile) {
+			// Swap the data items; the DOM follows on the next render.
+			const fromIdx = items.indexOf(item);
+			const targetId = target.getAttribute("data-tile-id");
+			const toIdx = items.findIndex((it) => it.id === targetId);
+			if (toIdx >= 0 && toIdx !== fromIdx) {
+				const [m] = items.splice(fromIdx, 1);
+				items.splice(toIdx, 0, m);
+				// Re-render the card to reflect the new order.
+				tile.style.pointerEvents = "";
+				void view.plugin.saveData(view.plugin.settings);
+				view.render();
+				return;
+			}
+		}
+	});
+
+	const end = () => {
+		if (!dragging) return;
+		dragging = false;
+		tile.removeClass("is-tile-dragging");
+	};
+	tile.addEventListener("pointerup", end);
+	tile.addEventListener("pointercancel", end);
+
+	// Tag the tile so we can find it by id during drag swap.
+	tile.setAttribute("data-tile-id", item.id);
 }
 
 function openLink(view: HomeView, link: LinkItem): void {
@@ -1276,10 +1349,12 @@ function renderCommands(view: HomeView, card: DashboardCard, body: HTMLElement):
 		setIcon(tile.createDiv("hearth-link-icon"), cmd.icon || "terminal-square");
 		tile.createDiv({ cls: "hearth-link-label", text: cmd.name || cmd.id });
 		const run = () => runCommand(view, cmd);
-		tile.addEventListener("click", run);
-		makeClickable(tile, run, cmd.name || cmd.id);
+		// In arrange mode, clicking a tile must NOT trigger its action.
+		if (!view.arrangeMode) {
+			tile.addEventListener("click", run);
+			makeClickable(tile, run, cmd.name || cmd.id);
+		}
 
-		// Tiles can only be resized while the dashboard is in arrange mode.
 		if (view.arrangeMode) {
 			makeTileResizable(view, tile, baseTile, () => cmd.sizeW, (v) => {
 				cmd.sizeW = v;
@@ -1288,6 +1363,7 @@ function renderCommands(view: HomeView, card: DashboardCard, body: HTMLElement):
 			}, () => cmd.size, (v) => {
 				cmd.size = v;
 			});
+			makeTileDraggable(view, grid, tile, commands, cmd);
 		}
 	}
 }

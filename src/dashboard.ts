@@ -10,6 +10,7 @@ import {
 	DashboardCard,
 	effectiveCardOpacity,
 	effectiveColumns,
+	effectiveFitToPage,
 	effectiveMaxWidth,
 	effectiveRowHeight,
 	removeCard,
@@ -19,6 +20,7 @@ import {
 } from "./types";
 import {
 	applyCardPosition,
+	clampCardToBoard,
 	enableDragResize,
 	ensureFreeform,
 	ensureLayout,
@@ -60,6 +62,23 @@ export function renderDashboard(
 	// Board-level default; per-card overrides are set in the render loop below.
 	grid.style.setProperty("--card-opacity", String(effectiveCardOpacity(s)));
 	grid.style.minHeight = `${layoutHeight(cards) + GRID_GAP}px`;
+
+	// In fit-to-page mode, recover any card that's stuck outside the visible
+	// board (e.g. from a layout import, a pane resize, or a glitched drag).
+	// The grid's clientHeight isn't final until laid out, so use the dashboard
+	// container's height (the visible area) as the clamp bound.
+	const fit = effectiveFitToPage(s);
+	if (fit) {
+		const boardH = container.clientHeight - 40; // minus toolbar row
+		let recovered = false;
+		for (const card of cards) {
+			if (clampCardToBoard(card, boardH > 0 ? boardH : null)) recovered = true;
+		}
+		if (recovered) {
+			grid.style.minHeight = `${layoutHeight(cards) + GRID_GAP}px`;
+			void view.plugin.saveData(s);
+		}
+	}
 
 	// An empty board is left blank — no placeholder text or icon. The Arrange
 	// toolbar (with "Add card") is still available above.

@@ -347,8 +347,11 @@ export const DEFAULT_SETTINGS: HomeSettings = {
 
 	backgroundKind: "default",
 	backgroundValue: "",
-	backgroundOpacity: 0.8,
-	backgroundBlur: 20,
+	/* Ambient: the background is visible but doesn't compete with content.
+	 * Opacity is low enough that foreground reads clearly; blur is gentle so
+	 * the image is still recognizable, not a wash of colour. */
+	backgroundOpacity: 0.35,
+	backgroundBlur: 6,
 
 	openOnStartup: true,
 	replaceNewTabs: true,
@@ -378,17 +381,22 @@ export const DEFAULT_SETTINGS: HomeSettings = {
 	taskNotesPriorityField: "priority",
 	taskNotesDoneValue: "done",
 
-	maxWidth: 1100,
+	maxWidth: 1600,
 };
 
-/** The cards a brand-new vault starts with. */
+/** The cards a brand-new vault starts with. A balanced home screen: a wide
+ * clock/greeting across the top, today's daily note and a mini calendar on the
+ * second row, recent files and vault stats below. */
 function starterCards(): DashboardCard[] {
 	return [
-		{ id: "card-base", kind: "embed", title: "Embedded base", target: "", x: 0, y: 0, w: 6, h: 6 },
-		{ id: "card-note", kind: "embed", title: "Embedded note", target: "", x: 6, y: 0, w: 6, h: 2 },
-		{ id: "card-bookmarks", kind: "bookmarks", title: "Bookmarks", x: 6, y: 2, w: 6, h: 2 },
-		{ id: "card-image", kind: "embed", title: "Embedded image", target: "", x: 6, y: 4, w: 3, h: 2 },
-		{ id: "card-favorites", kind: "favorites", title: "Favorites", x: 9, y: 4, w: 3, h: 2 },
+		// Top row: a wide clock & greeting.
+		{ id: "card-clock", kind: "clock", title: "", x: 0, y: 0, w: 12, h: 3 },
+		// Second row: today's daily note (left) and mini calendar (right).
+		{ id: "card-daily", kind: "daily", title: "Today", x: 0, y: 3, w: 7, h: 6 },
+		{ id: "card-calendar", kind: "calendar", title: "Calendar", x: 7, y: 3, w: 5, h: 6 },
+		// Third row: recent files (left) and vault stats (right).
+		{ id: "card-recent", kind: "recent", title: "Recent", x: 0, y: 9, w: 7, h: 4, count: 8 },
+		{ id: "card-stats", kind: "stats", title: "Vault", x: 7, y: 9, w: 5, h: 4 },
 	];
 }
 
@@ -567,8 +575,8 @@ export function migrateSettings(s: HomeSettings, raw: Record<string, unknown>): 
 	}
 	if (typeof s.rowHeight !== "number" || s.rowHeight <= 0) s.rowHeight = 92;
 	if (typeof s.cardOpacity !== "number") s.cardOpacity = 0.6;
-	if (typeof s.backgroundOpacity !== "number") s.backgroundOpacity = 0.8;
-	if (typeof s.backgroundBlur !== "number") s.backgroundBlur = 20;
+	if (typeof s.backgroundOpacity !== "number") s.backgroundOpacity = 0.35;
+	if (typeof s.backgroundBlur !== "number") s.backgroundBlur = 6;
 	// Fit-to-page is the default for fresh installs; existing users keep their
 	// choice (only backfill when the field is missing entirely).
 	if (typeof raw.fitToPage !== "boolean") s.fitToPage = true;
