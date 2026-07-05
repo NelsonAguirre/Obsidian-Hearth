@@ -64,16 +64,30 @@
 	gap: 18px;
 	/* Sit above the dashboard so the search dropdown overlay isn't covered. */
 	position: relative;
-	z-index: 2;
+	z-index: 50;
 }
 
+/* The search row: search column (flex:1) + New-note button. */
 .hearth-search-wrap {
 	position: relative;
 	width: 100%;
 	max-width: 720px;
 	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+/* The search column holds the bar, the filters and the results overlay. It's
+ * flex:1 so it matches the search field's width exactly (the New-note button
+ * sits beside it, not inside it), and the filters therefore span only the
+ * field's width, not the button's. */
+.hearth-search-col {
+	position: relative;
+	flex: 1 1 auto;
+	min-width: 0;
+	display: flex;
 	flex-direction: column;
-	align-items: stretch;
+	gap: 8px;
 }
 
 .hearth-title {
@@ -104,6 +118,8 @@
 
 /* ---- Search --------------------------------------------------------- */
 
+/* (The search row is .hearth-search-wrap above; .hearth-search is kept as a
+   legacy alias but the row layout lives on .hearth-search-wrap.) */
 .hearth-search {
 	display: flex;
 	align-items: center;
@@ -185,7 +201,8 @@
 	top: calc(100% + 6px);
 	left: 0;
 	right: 0;
-	z-index: 30;
+	/* Above every dashboard element (cards, overlays, toolbars). */
+	z-index: 100;
 	max-height: min(360px, 50vh);
 	overflow-y: auto;
 	border-radius: 12px;
@@ -262,11 +279,11 @@
 	flex-wrap: wrap;
 	/* Spread the chips from the first to the last edge of the row so they span
 	 * the whole search width and stay evenly distributed. Sizes are unchanged;
-	 * only the spacing between them is. */
+	 * only the spacing between them is. Width matches the search column (i.e.
+	 * the search field), not the New-note button beside it. */
 	justify-content: space-between;
 	gap: 8px;
 	width: 100%;
-	max-width: 720px;
 }
 
 .hearth-filter {
@@ -907,18 +924,18 @@
 }
 
 .hearth-calendar-nav:hover {
-	background: var(--background-modifier-hover);
-	color: var(--text-normal);
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
 	border-color: var(--interactive-accent);
 }
 
-/* Ensure the chevron glyphs actually render at a visible size inside the
-   compact nav buttons. Use normal text colour and a thicker stroke so the
-   arrows are clearly readable, not faint. */
+/* Ensure the chevron glyphs render with a strong, high-contrast stroke so the
+   arrows are clearly visible (not faint) inside the compact nav buttons. */
 .hearth-calendar-nav .svg-icon {
 	width: 18px;
 	height: 18px;
 	stroke-width: 2.5px;
+	color: currentColor;
 }
 
 .hearth-calendar-label {
@@ -1826,8 +1843,8 @@
 	position: absolute;
 	right: 2px;
 	bottom: 2px;
-	width: 12px;
-	height: 12px;
+	width: 16px;
+	height: 16px;
 	border-radius: 0 0 6px 0;
 	cursor: nwse-resize;
 	opacity: 0;
@@ -1836,11 +1853,13 @@
 	touch-action: none;
 }
 
-/* Only show the per-tile resize grip while the board is in arrange mode, and
-   only on hover so it stays out of the way at rest. The grip sits above the
-   card drag overlay (z-index 5) so it can be grabbed in arrange mode. */
-.hearth-grid.is-arranging .hearth-link-tile:hover .hearth-tile-resize {
-	opacity: 0.7;
+/* Only show the per-tile resize grip while the board is in arrange mode. The
+   grip is always visible (not hover-gated) because the card drag overlay sits
+   above the tile body and would otherwise swallow the hover, hiding the grip.
+   The grip itself sits above the drag overlay (z-index 5) so it stays
+   grabbable in arrange mode. */
+.hearth-grid.is-arranging .hearth-tile-resize {
+	opacity: 0.8;
 }
 
 .hearth-grid.is-arranging .hearth-tile-resize {

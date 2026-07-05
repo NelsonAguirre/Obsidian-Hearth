@@ -1,6 +1,6 @@
 import { Command, Component, debounce, Platform, setIcon, TAbstractFile, TFile, TFolder } from "obsidian";
 import type { HomeView } from "./view";
-import { FILE_TYPE_GROUPS, FileTypeGroup, groupForFile, iconForFile } from "./filetypes";
+import { FILE_TYPE_GROUPS, FileTypeGroup, groupForFile, iconForFile, OTHER_GROUP_ID } from "./filetypes";
 import { QueryHit, runQuery, searchFileContents } from "./query";
 
 /** A rendered result: either a vault file/folder hit or a command to run. */
@@ -108,11 +108,13 @@ export class SearchSection {
 	private detectGroups(): FileTypeGroup[] {
 		const present = new Set<string>();
 		let hasFolders = false;
+		let hasFiles = false;
 		for (const f of this.view.app.vault.getAllLoadedFiles()) {
 			if (f instanceof TFolder) {
 				if (f.path !== "/") hasFolders = true;
 				continue;
 			}
+			hasFiles = true;
 			const g = groupForFile(f);
 			if (g) present.add(g.id);
 		}
@@ -120,6 +122,9 @@ export class SearchSection {
 		return FILE_TYPE_GROUPS.filter((g) => {
 			if (hidden.has(g.id)) return false;
 			if (g.id === "folders") return hasFolders;
+			// "Other" is a catch-all: show it whenever there are any non-folder
+			// files, so unmatched formats are always reachable as a filter.
+			if (g.id === OTHER_GROUP_ID) return hasFiles;
 			return present.has(g.id);
 		});
 	}

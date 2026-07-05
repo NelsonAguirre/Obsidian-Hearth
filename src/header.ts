@@ -27,12 +27,13 @@ export function renderHeader(view: HomeView, container: HTMLElement, component: 
 
 	const search = new SearchSection(view);
 
-	// A relative wrapper around the search row so the results dropdown can float
-	// as an overlay beneath the bar instead of pushing the dashboard down (which
-	// on mobile / fit-to-page clipped content out of view).
-	const searchWrap = container.createDiv("hearth-search-wrap");
-	const searchRow = searchWrap.createDiv("hearth-search");
-	const bar = search.renderBar(searchRow);
+	// The search row holds the search column (bar + filters + results overlay)
+	// and the New-note button side by side. Filters live inside the search
+	// column so they span exactly the search field's width, not the button's.
+	const searchRow = container.createDiv("hearth-search");
+	const searchWrap = searchRow.createDiv("hearth-search-wrap");
+	const searchCol = searchWrap.createDiv("hearth-search-col");
+	const bar = search.renderBar(searchCol);
 
 	if (s.showNewNoteButton && !mobileOnly) {
 		const btn = searchRow.createEl("button", {
@@ -48,6 +49,9 @@ export function renderHeader(view: HomeView, container: HTMLElement, component: 
 		void bar;
 	}
 
-	// Results dropdown overlays from the wrapper; filter chips render under it.
-	search.renderResultsAndFilters(searchWrap, container, component);
+	// Results dropdown overlays from the search column; filter chips render
+	// under the bar inside the same column (matching its width). Click-outside
+	// dismissal is bound to the search column, so clicking the title, the
+	// New-note button, or anywhere off the search field closes the dropdown.
+	search.renderResultsAndFilters(searchCol, searchCol, component);
 }

@@ -3,13 +3,12 @@ import type { HomeView } from "./view";
 import { effectiveBackground } from "./types";
 
 /**
- * URL of the bundled default background. Ships as a release asset
- * (assets/default-bg.gif → attached to each GitHub release); the URL is stable
- * across versions because releases are immutable. Update the tag suffix when
- * shipping a new image with a release.
+ * URL of the bundled default background. Served straight from the main branch
+ * on GitHub so it works without depending on a specific release asset being
+ * attached. Update the file at assets/default-bg.gif to ship a new image.
  */
 const DEFAULT_BG_URL =
-	"https://github.com/ondreu/Hearth/releases/download/1.5.0-beta/default-bg.gif";
+	"https://raw.githubusercontent.com/ondreu/Hearth/refs/heads/main/assets/default-bg.gif";
 
 /**
  * Apply the optional, customizable background as a separate layer behind the

@@ -371,7 +371,7 @@ export const DEFAULT_SETTINGS: HomeSettings = {
 	gridColumns: 12,
 	rowHeight: 92,
 	favorites: [],
-	fitToPage: false,
+	fitToPage: true,
 
 	taskNotesStatusField: "status",
 	taskNotesDueField: "due",
@@ -568,6 +568,9 @@ export function migrateSettings(s: HomeSettings, raw: Record<string, unknown>): 
 	if (typeof s.rowHeight !== "number" || s.rowHeight <= 0) s.rowHeight = 92;
 	if (typeof s.cardOpacity !== "number") s.cardOpacity = 0.6;
 	if (typeof s.backgroundOpacity !== "number") s.backgroundOpacity = 0.4;
+	// Fit-to-page is the default for fresh installs; existing users keep their
+	// choice (only backfill when the field is missing entirely).
+	if (typeof raw.fitToPage !== "boolean") s.fitToPage = true;
 	// Migrate pre-1.4.1 "none" defaults to "default" so existing users see the
 	// bundled background unless they explicitly turned it off (kept as "none").
 	// Only kick in when the field is missing (very old installs); otherwise
