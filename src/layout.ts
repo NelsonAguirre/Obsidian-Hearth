@@ -205,6 +205,12 @@ function sanitizeTasks(r: Record<string, unknown>): TasksConfig {
 	if (typeof r.showCompleted === "boolean") cfg.showCompleted = r.showCompleted;
 	if (typeof r.count === "number") cfg.count = r.count;
 	if (r.layout === "list" || r.layout === "kanban") cfg.layout = r.layout;
+	if (Array.isArray(r.kanbanOrder)) {
+		cfg.kanbanOrder = r.kanbanOrder.filter((k): k is string => typeof k === "string");
+	}
+	if (Array.isArray(r.kanbanHidden)) {
+		cfg.kanbanHidden = r.kanbanHidden.filter((k): k is string => typeof k === "string");
+	}
 	return cfg;
 }
 
@@ -212,6 +218,9 @@ function sanitizeCalendar(r: Record<string, unknown>): CalendarConfig {
 	const cfg: CalendarConfig = {};
 	if (typeof r.showWeekNumbers === "boolean") cfg.showWeekNumbers = r.showWeekNumbers;
 	if (typeof r.heatmap === "boolean") cfg.heatmap = r.heatmap;
+	if (r.heatmapMetric === "modified" || r.heatmapMetric === "created") {
+		cfg.heatmapMetric = r.heatmapMetric;
+	}
 	return cfg;
 }
 

@@ -1374,9 +1374,11 @@
 	color: var(--text-faint);
 }
 
-/* Heatmap tint for calendar day cells, driven by --heat (0–4). */
+/* Heatmap tint for calendar day cells, driven by --heat (0–4). Built from the
+ * stable --accent-h/s/l vars (not --interactive-accent-hsl, which is
+ * comma-separated on some Obsidian versions and would break slash-alpha). */
 .hearth-calendar-day.has-heat {
-	background: hsl(var(--interactive-accent-hsl, 258 90% 66%) / calc(var(--heat, 0) * 0.2));
+	background-color: hsla(var(--accent-h), var(--accent-s), var(--accent-l), calc(var(--heat, 0) * 0.22));
 }
 
 /* ---- Kanban board --------------------------------------------------- */
@@ -1479,7 +1481,7 @@
 }
 
 .hearth-heatmap-cell.has-heat {
-	background: hsl(var(--interactive-accent-hsl, 258 90% 66%) / calc(0.15 + var(--heat, 0) * 0.2125));
+	background-color: hsla(var(--accent-h), var(--accent-s), var(--accent-l), calc(0.15 + var(--heat, 0) * 0.2125));
 	cursor: pointer;
 }
 
@@ -1550,4 +1552,96 @@
 .hearth-dash-btn.is-drop-target {
 	outline: 2px dashed var(--interactive-accent);
 	outline-offset: 1px;
+}
+
+/* ---- Task priority indicator ---------------------------------------- */
+.hearth-task-priority {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 0.72rem;
+	color: var(--text-muted);
+	flex-shrink: 0;
+}
+
+.hearth-task-priority-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--text-faint);
+}
+
+.hearth-task-priority.is-high .hearth-task-priority-dot {
+	background: var(--color-red, #e05252);
+}
+
+.hearth-task-priority.is-medium .hearth-task-priority-dot {
+	background: var(--color-orange, #e0913b);
+}
+
+.hearth-task-priority.is-low .hearth-task-priority-dot {
+	background: var(--color-blue, #4a8fe0);
+}
+
+.hearth-task-priority-label {
+	text-transform: capitalize;
+}
+
+.hearth-kanban-card-meta {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+/* ---- Kanban column header controls ---------------------------------- */
+.hearth-kanban-col-head {
+	cursor: grab;
+}
+
+.hearth-kanban-col-hide {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 2px;
+	margin-left: 4px;
+	background: transparent;
+	box-shadow: none;
+	color: var(--text-faint);
+	opacity: 0;
+	cursor: pointer;
+}
+
+.hearth-kanban-col-head:hover .hearth-kanban-col-hide {
+	opacity: 0.8;
+}
+
+.hearth-kanban-col.is-col-drop-target {
+	outline: 2px dashed var(--interactive-accent);
+	outline-offset: 1px;
+	border-radius: 8px;
+}
+
+/* ---- Command tile resize handle ------------------------------------- */
+.hearth-commands-grid .hearth-link-tile {
+	position: relative;
+}
+
+.hearth-tile-resize {
+	position: absolute;
+	right: 2px;
+	bottom: 2px;
+	width: 12px;
+	height: 12px;
+	border-radius: 0 0 6px 0;
+	cursor: nwse-resize;
+	opacity: 0;
+	background:
+		linear-gradient(135deg, transparent 50%, var(--text-faint) 50%, var(--text-faint) 62%, transparent 62%, transparent 74%, var(--text-faint) 74%, var(--text-faint) 86%, transparent 86%);
+	touch-action: none;
+}
+
+.hearth-link-tile:hover .hearth-tile-resize {
+	opacity: 0.7;
 }

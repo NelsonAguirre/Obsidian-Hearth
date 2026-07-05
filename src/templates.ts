@@ -116,7 +116,7 @@ export const CARD_TEMPLATES: CardTemplate[] = [
 	{
 		id: "heatmap",
 		name: "Activity heatmap",
-		icon: "grid-2x2",
+		icon: "activity",
 		build: () => ({ kind: "heatmap", title: "Activity", heatmap: {}, w: 6, h: 3 }),
 	},
 	{

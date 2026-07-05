@@ -268,13 +268,24 @@ export class CardSettingsModal extends Modal {
 			);
 		new Setting(containerEl)
 			.setName("Heatmap")
-			.setDesc("Tint each day by how many notes were edited that day.")
+			.setDesc("Tint each day by note activity that day.")
 			.addToggle((t) =>
 				t.setValue(cfg.heatmap ?? false).onChange((v) => {
 					cfg.heatmap = v || undefined;
 					this.opts.save();
+					this.render();
 				}),
 			);
+		if (cfg.heatmap) {
+			new Setting(containerEl).setName("Heatmap counts").addDropdown((d) => {
+				d.addOption("modified", "Notes edited");
+				d.addOption("created", "Notes created");
+				d.setValue(cfg.heatmapMetric ?? "modified").onChange((v) => {
+					cfg.heatmapMetric = v as NonNullable<typeof cfg.heatmapMetric>;
+					this.opts.save();
+				});
+			});
+		}
 	}
 
 	private heatmapEditor(containerEl: HTMLElement): void {
@@ -441,7 +452,10 @@ export class CardSettingsModal extends Modal {
 		const card = this.card;
 		new Setting(containerEl)
 			.setName("Button size")
-			.setDesc("Size of the command tiles. Applies when you close this dialog.")
+			.setDesc(
+				"Default size of the command tiles. Resize an individual tile by " +
+					"dragging its bottom-right corner, or set a per-tile size below.",
+			)
 			.addSlider((s) =>
 				s
 					.setLimits(60, 180, 10)
@@ -538,7 +552,11 @@ export class CardSettingsModal extends Modal {
 
 		new Setting(containerEl)
 			.setName("Layout")
-			.setDesc("List, or a Kanban board grouped by status (drag cards between columns).")
+			.setDesc(
+				"List, or a Kanban board grouped by status. On the board, drag cards " +
+					"between columns, drag column headers to reorder, and use a column's " +
+					"eye icon to hide it.",
+			)
 			.addDropdown((d) => {
 				d.addOption("list", "List");
 				d.addOption("kanban", "Kanban board");
@@ -548,6 +566,36 @@ export class CardSettingsModal extends Modal {
 					this.render();
 				});
 			});
+
+		if (cfg.layout === "kanban" && (cfg.kanbanHidden?.length || cfg.kanbanOrder?.length)) {
+			const reset = new Setting(containerEl)
+				.setName("Kanban columns")
+				.setDesc(
+					cfg.kanbanHidden?.length
+						? `Hidden: ${cfg.kanbanHidden.join(", ")}`
+						: "Custom column order is set.",
+				);
+			if (cfg.kanbanHidden?.length) {
+				reset.addButton((b) =>
+					b.setButtonText("Show all").onClick(() => {
+						cfg.kanbanHidden = undefined;
+						this.opts.save();
+						this.render();
+					}),
+				);
+			}
+			reset.addExtraButton((b) =>
+				b
+					.setIcon("rotate-ccw")
+					.setTooltip("Reset column order & visibility")
+					.onClick(() => {
+						cfg.kanbanHidden = undefined;
+						cfg.kanbanOrder = undefined;
+						this.opts.save();
+						this.render();
+					}),
+			);
+		}
 
 		new Setting(containerEl)
 			.setName("Show completed")

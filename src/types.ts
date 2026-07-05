@@ -46,14 +46,21 @@ export interface TasksConfig {
 	/** "list" (default) renders a flat list; "kanban" groups tasks into status
 	 * columns that tasks can be dragged between. */
 	layout?: "list" | "kanban";
+	/** Kanban: explicit left-to-right order of column keys (drag to reorder).
+	 * Columns not listed keep their default order after the listed ones. */
+	kanbanOrder?: string[];
+	/** Kanban: column keys the user has hidden. */
+	kanbanHidden?: string[];
 }
 
 /** Per-card configuration for a "calendar" card. */
 export interface CalendarConfig {
 	/** Show an ISO week-number column down the left edge. */
 	showWeekNumbers?: boolean;
-	/** Tint each day by how many notes were edited that day (a heatmap). */
+	/** Tint each day by note activity that day (a heatmap). */
 	heatmap?: boolean;
+	/** Which timestamp the heatmap counts. Default "modified". */
+	heatmapMetric?: "modified" | "created";
 }
 
 /** Per-card configuration for a "search" (saved search) card. */
@@ -280,6 +287,8 @@ export interface HomeSettings {
 	 * to match whatever the vault has them set to. */
 	taskNotesStatusField: string;
 	taskNotesDueField: string;
+	/** Frontmatter field read for a task's priority (shown as an indicator). */
+	taskNotesPriorityField: string;
 	/** The status value that counts as "done". */
 	taskNotesDoneValue: string;
 
@@ -325,6 +334,7 @@ export const DEFAULT_SETTINGS: HomeSettings = {
 
 	taskNotesStatusField: "status",
 	taskNotesDueField: "due",
+	taskNotesPriorityField: "priority",
 	taskNotesDoneValue: "done",
 
 	maxWidth: 1100,

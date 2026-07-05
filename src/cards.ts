@@ -359,6 +359,8 @@ interface DailyNotesOptions {
 	format?: string;
 	/** Folder daily notes live in. */
 	folder?: string;
+	/** Vault path of the template applied to new daily notes. */
+	template?: string;
 }
 
 /** The core Daily notes plugin's options, or null if it's disabled. Shared by
@@ -469,8 +471,8 @@ function renderCalendar(view: HomeView, card: DashboardCard, body: HTMLElement):
 
 	const cfg = card.calendar ?? {};
 	const wrap = body.createDiv("hearth-calendar");
-	// Activity counts (edits per day) are only needed for the heatmap tint.
-	const activity = cfg.heatmap ? activityByDay(view.app, "modified") : null;
+	// Activity counts are only needed for the heatmap tint.
+	const activity = cfg.heatmap ? activityByDay(view.app, cfg.heatmapMetric ?? "modified") : null;
 	let cursor: Moment = moment().startOf("month");
 
 	const draw = () => {
@@ -599,8 +601,9 @@ function heatLevel(count: number, peak: number): number {
 }
 
 /** Create a daily note for `day` at the plugin's configured path (making any
- * missing parent folders), returning the file or null on failure. The note is
- * created empty — the core template only applies to "today" via its command. */
+ * missing parent folders), returning the file or null on failure. Applies the
+ * core Daily notes template (with the usual {{date}}/{{time}}/{{title}}
+ * substitutions) so a note made here matches Obsidian's own defaults. */
 async function createDailyNoteAt(
 	view: HomeView,
 	day: Moment,
@@ -617,11 +620,38 @@ async function createDailyNoteAt(
 			// Folder may have been created concurrently — ignore and try the file.
 		}
 	}
+	const format = (options.format || "").trim() || "YYYY-MM-DD";
+	let content = "";
+	const templatePath = (options.template || "").trim();
+	if (templatePath) {
+		const tpl =
+			view.app.vault.getAbstractFileByPath(templatePath) ??
+			view.app.vault.getAbstractFileByPath(`${templatePath}.md`);
+		if (tpl instanceof TFile) {
+			try {
+				content = applyDailyTemplate(await view.app.vault.read(tpl), day, format);
+			} catch {
+				content = "";
+			}
+		}
+	}
 	try {
-		return await view.app.vault.create(path, "");
+		return await view.app.vault.create(path, content);
 	} catch {
 		return null;
 	}
+}
+
+/** Substitute the daily-note template variables Obsidian's core plugin supports
+ * for an arbitrary date: {{date}}, {{time}}, {{title}} and their {{date:FMT}}/
+ * {{time:FMT}} formatted variants. */
+function applyDailyTemplate(raw: string, day: Moment, format: string): string {
+	return raw
+		.replace(/\{\{\s*date\s*:\s*([^}]+?)\s*\}\}/gi, (_m, f: string) => day.format(f))
+		.replace(/\{\{\s*time\s*:\s*([^}]+?)\s*\}\}/gi, (_m, f: string) => day.format(f))
+		.replace(/\{\{\s*date\s*\}\}/gi, day.format(format))
+		.replace(/\{\{\s*time\s*\}\}/gi, day.format("HH:mm"))
+		.replace(/\{\{\s*title\s*\}\}/gi, day.format(format));
 }
 
 /** Count files edited (or created) per calendar day, keyed by YYYY-MM-DD. Read
@@ -1098,6 +1128,45 @@ function renderCommands(view: HomeView, card: DashboardCard, body: HTMLElement):
 		const run = () => runCommand(view, cmd);
 		tile.addEventListener("click", run);
 		makeClickable(tile, run, cmd.name || cmd.id);
+
+		// Drag the corner handle to resize this individual tile.
+		const handle = tile.createDiv("hearth-tile-resize");
+		handle.setAttribute("aria-hidden", "true");
+		let resizing = false;
+		let startPx = 0;
+		let startX = 0;
+		let startY = 0;
+		handle.addEventListener("click", (e) => e.stopPropagation());
+		handle.addEventListener("pointerdown", (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			resizing = true;
+			startPx = cmd.size && cmd.size > 0 ? cmd.size : baseTile;
+			startX = e.clientX;
+			startY = e.clientY;
+			handle.setPointerCapture(e.pointerId);
+		});
+		handle.addEventListener("pointermove", (e) => {
+			if (!resizing) return;
+			const delta = Math.max(e.clientX - startX, e.clientY - startY);
+			const size = Math.max(50, Math.min(360, Math.round((startPx + delta) / 5) * 5));
+			cmd.size = size === baseTile ? undefined : size;
+			tile.style.setProperty("--hearth-tile", `${size}px`);
+			const span = Math.max(1, Math.round(size / baseTile));
+			tile.style.gridColumn = span > 1 ? `span ${span}` : "";
+		});
+		const endResize = (e: PointerEvent) => {
+			if (!resizing) return;
+			resizing = false;
+			try {
+				handle.releasePointerCapture(e.pointerId);
+			} catch {
+				// pointer already released
+			}
+			void view.plugin.saveData(view.plugin.settings);
+		};
+		handle.addEventListener("pointerup", endResize);
+		handle.addEventListener("pointercancel", endResize);
 	}
 }
 
@@ -1118,6 +1187,9 @@ interface TaskHit {
 	/** Raw TaskNotes status value, shown as a badge instead of a checkbox
 	 * since it may not be a simple open/done binary. */
 	status?: string;
+	/** Raw TaskNotes priority value (e.g. high/normal/low), shown as an
+	 * indicator dot + label. */
+	priority?: string;
 }
 
 /** Whether `path` is in scope per the card's folder whitelist/blacklist. An
@@ -1138,6 +1210,23 @@ function renderTasks(view: HomeView, card: DashboardCard, body: HTMLElement): vo
 	const container = body.createDiv("hearth-tasks-wrap");
 	const refresh = () => void loadAndRenderTasks(view, cfg, container, refresh);
 	refresh();
+}
+
+/** Map a raw priority value to a coarse level for coloring the indicator. */
+function priorityLevel(priority: string): "high" | "medium" | "low" | "other" {
+	const v = priority.trim().toLowerCase();
+	if (/^(high|urgent|critical|highest|p1|1|!!!|🔺|⏫)$/.test(v)) return "high";
+	if (/^(medium|normal|med|moderate|p2|2|🔼)$/.test(v)) return "medium";
+	if (/^(low|lowest|minor|p3|3|🔽|⏬)$/.test(v)) return "low";
+	return "other";
+}
+
+/** A small colored dot + label showing a task's priority. */
+function renderPriority(parent: HTMLElement, priority: string): void {
+	const chip = parent.createDiv(`hearth-task-priority is-${priorityLevel(priority)}`);
+	chip.createDiv("hearth-task-priority-dot");
+	chip.createSpan({ cls: "hearth-task-priority-label", text: priority });
+	chip.setAttribute("title", `Priority: ${priority}`);
 }
 
 function sortTasks(hits: TaskHit[]): void {
@@ -1219,6 +1308,7 @@ function renderTaskRow(
 	}
 
 	row.createDiv({ cls: "hearth-list-label hearth-task-text", text: hit.text || hit.file.basename });
+	if (hit.priority) renderPriority(row, hit.priority);
 	if (hit.due) {
 		const due = row.createDiv({ cls: "hearth-task-due", text: hit.due });
 		due.toggleClass("is-overdue", !hit.done && hit.due < today);
@@ -1277,6 +1367,40 @@ function renderTaskKanban(
 		});
 	}
 
+	// Apply the user's saved column order (unlisted keys keep their default
+	// position after the listed ones, since sort is stable).
+	const order = cfg.kanbanOrder;
+	if (order && order.length) {
+		const rank = (k: string) => {
+			const i = order.indexOf(k);
+			return i < 0 ? Number.MAX_SAFE_INTEGER : i;
+		};
+		columns.sort((a, b) => rank(a.key) - rank(b.key));
+	}
+
+	const persist = () => void view.plugin.saveData(view.plugin.settings);
+	const hidden = new Set(cfg.kanbanHidden ?? []);
+	const visible = columns.filter((c) => !hidden.has(c.key));
+
+	// Reorder columns by dragging their headers; persists the full key order.
+	const reorder = (fromKey: string, toKey: string) => {
+		if (fromKey === toKey) return;
+		const keys = columns.map((c) => c.key);
+		const fi = keys.indexOf(fromKey);
+		const ti = keys.indexOf(toKey);
+		if (fi < 0 || ti < 0) return;
+		keys.splice(ti, 0, keys.splice(fi, 1)[0]);
+		cfg.kanbanOrder = keys;
+		persist();
+		refresh();
+	};
+
+	const hideColumn = (key: string) => {
+		cfg.kanbanHidden = [...new Set([...(cfg.kanbanHidden ?? []), key])];
+		persist();
+		refresh();
+	};
+
 	const board = container.createDiv("hearth-kanban");
 	const today: string = moment().format("YYYY-MM-DD");
 
@@ -1295,22 +1419,59 @@ function renderTaskKanban(
 		}
 	};
 
-	for (const col of columns) {
+	for (const col of visible) {
 		const colEl = board.createDiv("hearth-kanban-col");
 		const head = colEl.createDiv("hearth-kanban-col-head");
 		head.createSpan({ cls: "hearth-kanban-col-title", text: col.label });
 		head.createSpan({ cls: "hearth-kanban-col-count", text: String(col.hits.length) });
+		const hideBtn = head.createEl("button", {
+			cls: "hearth-kanban-col-hide",
+			attr: { "aria-label": `Hide "${col.label}" column` },
+		});
+		setIcon(hideBtn, "eye-off");
+		hideBtn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			hideColumn(col.key);
+		});
+
+		// Drag the header to reorder columns (distinct from dragging task cards).
+		head.setAttribute("draggable", "true");
+		head.addEventListener("dragstart", (e) => {
+			e.dataTransfer?.setData("application/hearth-col", col.key);
+			colEl.addClass("is-dragging");
+		});
+		head.addEventListener("dragend", () => colEl.removeClass("is-dragging"));
+		head.addEventListener("dragover", (e) => {
+			if (e.dataTransfer?.types.includes("application/hearth-col")) {
+				e.preventDefault();
+				colEl.addClass("is-col-drop-target");
+			}
+		});
+		head.addEventListener("dragleave", () => colEl.removeClass("is-col-drop-target"));
+		head.addEventListener("drop", (e) => {
+			const fromKey = e.dataTransfer?.getData("application/hearth-col");
+			colEl.removeClass("is-col-drop-target");
+			if (fromKey) {
+				e.preventDefault();
+				e.stopPropagation();
+				reorder(fromKey, col.key);
+			}
+		});
 
 		const colBody = colEl.createDiv("hearth-kanban-col-body");
 		colBody.addEventListener("dragover", (e) => {
+			// Only task-card drags target the column body (not header reorders).
+			if (e.dataTransfer?.types.includes("application/hearth-col")) return;
 			e.preventDefault();
 			colBody.addClass("is-drop-target");
 		});
 		colBody.addEventListener("dragleave", () => colBody.removeClass("is-drop-target"));
 		colBody.addEventListener("drop", (e) => {
-			e.preventDefault();
 			colBody.removeClass("is-drop-target");
-			const idx = parseInt(e.dataTransfer?.getData("text/plain") ?? "", 10);
+			const raw = e.dataTransfer?.getData("text/plain") ?? "";
+			if (!raw) return; // header reorder, handled on the header
+			e.preventDefault();
+			const idx = parseInt(raw, 10);
 			const hit = Number.isNaN(idx) ? null : hits[idx];
 			if (hit) moveTo(hit, col);
 		});
@@ -1326,8 +1487,10 @@ function renderTaskKanban(
 			});
 			cardEl.addEventListener("dragend", () => cardEl.removeClass("is-dragging"));
 			cardEl.createDiv({ cls: "hearth-kanban-card-text", text: hit.text || hit.file.basename });
+			const meta = cardEl.createDiv("hearth-kanban-card-meta");
+			if (hit.priority) renderPriority(meta, hit.priority);
 			if (hit.due) {
-				const due = cardEl.createDiv({ cls: "hearth-task-due", text: hit.due });
+				const due = meta.createDiv({ cls: "hearth-task-due", text: hit.due });
 				due.toggleClass("is-overdue", !hit.done && hit.due < today);
 			}
 			const open = () => void openTask(view, hit);
@@ -1372,6 +1535,7 @@ function collectTaskNotesTasks(view: HomeView, cfg: TasksConfig): TaskHit[] {
 	const s = view.plugin.settings;
 	const statusField = s.taskNotesStatusField.trim() || "status";
 	const dueField = s.taskNotesDueField.trim() || "due";
+	const priorityField = s.taskNotesPriorityField.trim() || "priority";
 	const doneValue = (s.taskNotesDoneValue.trim() || "done").toLowerCase();
 
 	const files = view.app.vault.getMarkdownFiles().filter((f) => inTaskScope(f.path, cfg));
@@ -1381,6 +1545,8 @@ function collectTaskNotesTasks(view: HomeView, cfg: TasksConfig): TaskHit[] {
 		if (!fm || !(statusField in fm)) continue;
 		const status = String(fm[statusField] ?? "");
 		const due: string | null = typeof fm[dueField] === "string" ? String(fm[dueField]) : null;
+		const priorityRaw = fm[priorityField];
+		const priority = priorityRaw == null || priorityRaw === "" ? undefined : String(priorityRaw);
 		hits.push({
 			file,
 			line: -1,
@@ -1388,6 +1554,7 @@ function collectTaskNotesTasks(view: HomeView, cfg: TasksConfig): TaskHit[] {
 			done: status.toLowerCase() === doneValue,
 			due,
 			status,
+			priority,
 		});
 	}
 	return hits;

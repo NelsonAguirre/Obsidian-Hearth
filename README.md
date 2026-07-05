@@ -9,7 +9,7 @@ embed notes, images, bases, bookmarks and quick text.
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/B7K822EW68)
 
-> Status: **v1.0** — the top section and a fully arrangeable card dashboard
+> Status: **v1.1** — the top section and a fully arrangeable card dashboard
 > (drag, resize, collision-aware packing, on-board card management, templates,
 > per-card colors, web embeds, live auto-refreshing, zoomable and editable
 > embeds, Excalidraw and canvas cards, multiple switchable dashboards with
@@ -81,7 +81,9 @@ embed notes, images, bases, bookmarks and quick text.
   notes were edited (or created) each day.
 - **Kanban tasks** — the Tasks card can render as a Kanban board grouped by
   status; drag cards between columns to change checkbox state or TaskNotes
-  status.
+  status, drag column headers to reorder them, and hide columns you don't need.
+  TaskNotes tasks also show a **priority indicator** read from a configurable
+  frontmatter field.
 - **Daily note** — always shows *today's* daily note (resolved from the core
   Daily notes plugin's date format and folder), with a one-click prompt to
   create it when it doesn't exist yet and a hideable button to open it in the

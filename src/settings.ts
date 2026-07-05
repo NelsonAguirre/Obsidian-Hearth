@@ -385,6 +385,16 @@ export class HomeSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
+			.setName("Priority field")
+			.setDesc("Frontmatter field read for a task's priority indicator.")
+			.addText((t) =>
+				t.setValue(s.taskNotesPriorityField).onChange(async (v) => {
+					s.taskNotesPriorityField = v;
+					await this.save();
+				}),
+			);
+
+		new Setting(containerEl)
 			.setName("“Done” status value")
 			.addText((t) =>
 				t.setValue(s.taskNotesDoneValue).onChange(async (v) => {
