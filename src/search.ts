@@ -47,7 +47,8 @@ export class SearchSection {
 		this.view = view;
 	}
 
-	private updateDebounced = debounce(() => this.update(), 140, false);
+	// resetTimer=true so it fires once typing pauses, not 140ms after the first key.
+	private updateDebounced = debounce(() => this.update(), 140, true);
 
 	/** Renders the search bar (icon + input). The caller places the New-note
 	 * button beside the returned bar element. */

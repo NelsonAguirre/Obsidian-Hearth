@@ -811,6 +811,8 @@ function renderWeb(card: DashboardCard, body: HTMLElement, component: Component)
 	frame.addEventListener("load", () => {
 		loaded = true;
 		body.removeClass("hearth-web-blocked");
+		// A slow but successful load can arrive after the fallback showed — clear it.
+		body.querySelector(".hearth-web-fallback")?.remove();
 	});
 	const timer = window.setTimeout(() => {
 		if (loaded) return;
