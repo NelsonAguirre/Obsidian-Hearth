@@ -1421,6 +1421,11 @@ interface TaskHit {
 	text: string;
 	done: boolean;
 	due: string | null;
+	/** TaskNotes "scheduled" date (frontmatter), used as a fallback for sorting
+	 * when no due date is set. */
+	scheduled: string | null;
+	/** File creation time (epoch ms), the final sort tiebreaker. */
+	created: number;
 	/** Raw TaskNotes status value, shown as a badge instead of a checkbox
 	 * since it may not be a simple open/done binary. */
 	status?: string;
@@ -1494,12 +1499,37 @@ function renderPriority(parent: HTMLElement, priority: string): void {
 	chip.setAttribute("title", `Priority: ${priority}`);
 }
 
+/** Sort tasks by: due date → scheduled date → priority → created date.
+ * Dates are compared as strings (YYYY-MM-DD sorts lexically). Priority uses
+ * the coarse high/medium/low/other level. Created is the file's ctime (epoch). */
 function sortTasks(hits: TaskHit[]): void {
+	const rank = (p: string | undefined): number => {
+		switch (priorityLevel(p ?? "")) {
+			case "high":
+				return 0;
+			case "medium":
+				return 1;
+			case "low":
+				return 2;
+			default:
+				return 3;
+		}
+	};
 	hits.sort((a, b) => {
+		// 1. Due date (earlier first; tasks without a due date sort after).
 		if (a.due && b.due) return a.due < b.due ? -1 : a.due > b.due ? 1 : 0;
 		if (a.due) return -1;
 		if (b.due) return 1;
-		return a.file.path.localeCompare(b.file.path);
+		// 2. Scheduled date (same logic as due).
+		if (a.scheduled && b.scheduled) return a.scheduled < b.scheduled ? -1 : a.scheduled > b.scheduled ? 1 : 0;
+		if (a.scheduled) return -1;
+		if (b.scheduled) return 1;
+		// 3. Priority (high → medium → low → other).
+		const pa = rank(a.priority);
+		const pb = rank(b.priority);
+		if (pa !== pb) return pa - pb;
+		// 4. Created date (oldest first).
+		return a.created - b.created;
 	});
 }
 
@@ -1808,13 +1838,15 @@ async function collectCheckboxTasks(view: HomeView, cfg: TasksConfig): Promise<T
 			if (!match) return;
 			const text = match[2].trim();
 			const dueMatch = /📅\s*(\d{4}-\d{2}-\d{2})/.exec(text);
-			hits.push({
-				file,
-				line: i,
-				text,
-				done: match[1].toLowerCase() === "x",
-				due: dueMatch ? dueMatch[1] : null,
-			});
+		hits.push({
+			file,
+			line: i,
+			text,
+			done: match[1].toLowerCase() === "x",
+			due: dueMatch ? dueMatch[1] : null,
+			scheduled: null,
+			created: file.stat.ctime,
+		});
 		});
 	}
 	return hits;
@@ -1835,10 +1867,15 @@ function collectTaskNotesTasks(view: HomeView, cfg: TasksConfig): TaskHit[] {
 	const files = view.app.vault.getMarkdownFiles().filter((f) => inTaskScope(f.path, cfg));
 	const hits: TaskHit[] = [];
 	for (const file of files) {
-		const fm = view.app.metadataCache.getFileCache(file)?.frontmatter;
+		const cache = view.app.metadataCache.getFileCache(file);
+		const fm = cache?.frontmatter;
 		if (!fm || !(statusField in fm)) continue;
 		const status = String(fm[statusField] ?? "");
 		const due: string | null = typeof fm[dueField] === "string" ? String(fm[dueField]) : null;
+		// TaskNotes' scheduled field is conventionally "scheduled"; read it as
+		// a fallback sort key when no due date is set.
+		const scheduledRaw = fm["scheduled"];
+		const scheduled: string | null = typeof scheduledRaw === "string" ? scheduledRaw : null;
 		const priorityRaw = fm[priorityField];
 		const priority = priorityRaw == null || priorityRaw === "" ? undefined : String(priorityRaw);
 		hits.push({
@@ -1847,6 +1884,8 @@ function collectTaskNotesTasks(view: HomeView, cfg: TasksConfig): TaskHit[] {
 			text: String(fm.title ?? file.basename),
 			done: status.toLowerCase() === doneValue,
 			due,
+			scheduled,
+			created: file.stat.ctime,
 			status,
 			priority,
 		});
