@@ -54,6 +54,7 @@ export function renderDashboard(
 
 	const grid = container.createDiv("hearth-grid");
 	grid.toggleClass("is-arranging", view.arrangeMode);
+	grid.style.setProperty("--card-opacity", String(s.cardOpacity ?? 1));
 	grid.style.minHeight = `${layoutHeight(cards) + GRID_GAP}px`;
 
 	// An empty board is left blank — no placeholder text or icon. The Arrange

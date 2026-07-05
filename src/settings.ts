@@ -455,6 +455,20 @@ export class HomeSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
+			.setName("Card opacity")
+			.setDesc("Transparent card backgrounds so the dashboard background shows through.")
+			.addSlider((sl) =>
+				sl
+					.setLimits(0, 1, 0.05)
+					.setValue(s.cardOpacity)
+					.setDynamicTooltip()
+					.onChange(async (v) => {
+						s.cardOpacity = v;
+						await this.save();
+					}),
+			);
+
+		new Setting(containerEl)
 			.setName("Cards")
 			.setDesc(
 				"Add and configure cards on the dashboard itself: open the home view, " +

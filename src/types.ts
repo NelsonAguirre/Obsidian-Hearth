@@ -285,6 +285,8 @@ export interface HomeSettings {
 	// ---- Appearance (layout density) ----
 	/** Tighten card and top-of-page spacing to enlarge the usable area. */
 	compact: boolean;
+	/** Card background opacity (0 = fully transparent, 1 = fully opaque). */
+	cardOpacity: number;
 
 	// ---- Search filters ----
 	/** Group ids the user has hidden from the auto-detected filter row. */
@@ -344,6 +346,7 @@ export const DEFAULT_SETTINGS: HomeSettings = {
 	mobileActionButtons: [],
 
 	compact: false,
+	cardOpacity: 1,
 
 	hiddenFilters: [],
 
@@ -519,6 +522,7 @@ export function migrateSettings(s: HomeSettings, raw: Record<string, unknown>): 
 		s.activeDashboardId = s.dashboards[0].id;
 	}
 	if (typeof s.rowHeight !== "number" || s.rowHeight <= 0) s.rowHeight = 92;
+	if (typeof s.cardOpacity !== "number") s.cardOpacity = 1;
 	if (!Array.isArray(s.pinnedCards)) s.pinnedCards = [];
 	// Seed the default buttons only if the field was never persisted, so an
 	// intentionally emptied list (all buttons removed) isn't reset on reload.

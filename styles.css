@@ -325,7 +325,8 @@
 	min-height: 0;
 	border-radius: 14px;
 	border: 1px solid var(--background-modifier-border);
-	background: var(--background-primary);
+	/* --card-opacity (0..1) tints the card surface without dimming content. */
+	background: color-mix(in srgb, var(--background-primary) calc(var(--card-opacity, 1) * 100%), transparent);
 	box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
 	overflow: hidden;
 	transition: box-shadow 120ms ease, transform 120ms ease;
