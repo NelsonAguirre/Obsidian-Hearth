@@ -795,6 +795,18 @@
 	height: calc(var(--hearth-tile-h, var(--hearth-tile, 90px)) * 0.26);
 }
 
+/* In arrange mode, tile cards (links/commands) are self-contained widgets: the
+ * card's drag overlay is disabled over them so each tile and its resize handle
+ * is fully interactive. The card is still draggable from its header. */
+.hearth-grid.is-arranging .hearth-card.is-tile-card .hearth-card-overlay {
+	pointer-events: none;
+}
+
+.hearth-grid.is-arranging .hearth-card.is-tile-card .hearth-link-tile {
+	position: relative;
+	z-index: 6;
+}
+
 .hearth-link-tile:hover {
 	border-color: var(--interactive-accent);
 	background: var(--background-modifier-hover);
@@ -1842,42 +1854,47 @@
 	position: relative;
 }
 
+/* Widget-style resize handle: a clear, grabbable corner triangle in the
+ * bottom-right of each tile, only in arrange mode. High-contrast (accent) so
+ * it's obviously a handle, and large enough to grab easily. */
 .hearth-tile-resize {
 	position: absolute;
 	right: 0;
 	bottom: 0;
-	width: 20px;
-	height: 20px;
-	border-radius: 0 0 8px 0;
+	width: 22px;
+	height: 22px;
 	cursor: nwse-resize;
 	opacity: 0;
-	/* A clear, high-contrast grip (accent-tinted) so it's obviously a resize
-	   handle, not a faint shimmer. */
+	pointer-events: none;
+	/* A solid triangular grip (accent-coloured) in the bottom-right corner. */
 	background: linear-gradient(
 		135deg,
 		transparent 0%,
-		transparent 48%,
-		var(--interactive-accent) 50%,
-		transparent 52%,
-		transparent 68%,
-		var(--interactive-accent) 70%,
-		transparent 72%,
-		transparent 88%,
-		var(--interactive-accent) 90%,
-		transparent 92%
+		transparent 45%,
+		var(--interactive-accent) 47%,
+		var(--interactive-accent) 100%
 	);
+	-webkit-mask: linear-gradient(135deg, transparent 55%, black 55%);
+	mask: linear-gradient(135deg, transparent 55%, black 55%);
+	border-bottom-right-radius: 12px;
 	touch-action: none;
-	pointer-events: auto;
 }
 
-/* Always visible in arrange mode (the card drag overlay covers tiles and would
-   otherwise swallow the hover that used to reveal the grip). Sits above the
-   card drag overlay (z-index 5) so it stays grabbable. */
+/* Always visible (and interactive) in arrange mode. The card drag overlay is
+ * disabled over tile cards (see .is-tile-card rules above), so the handle
+ * never competes with card dragging. */
 .hearth-grid.is-arranging .hearth-tile-resize {
-	opacity: 0.9;
-	z-index: 20;
+	opacity: 0.85;
+	pointer-events: auto;
+	z-index: 10;
 }
 
 .hearth-grid.is-arranging .hearth-tile-resize:hover {
 	opacity: 1;
+}
+
+/* While a tile is being resized, bring it above its siblings. */
+.hearth-link-tile.is-tile-resizing {
+	z-index: 15;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }

@@ -79,6 +79,9 @@ export function renderDashboard(
 		applyCardPosition(el, card);
 
 		if (card.pinned) el.addClass("is-pinned");
+		if (card.kind === "links" || card.kind === "commands") {
+			el.addClass("is-tile-card");
+		}
 		if (card.accent) {
 			el.style.setProperty("--card-accent", card.accent);
 			el.addClass("has-accent");

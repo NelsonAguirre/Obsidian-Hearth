@@ -1104,6 +1104,9 @@ function renderLinks(view: HomeView, card: DashboardCard, body: HTMLElement): vo
 	const grid = body.createDiv("hearth-links hearth-tiles-sized");
 	const baseTile = card.tileSize && card.tileSize > 0 ? card.tileSize : 90;
 	grid.style.setProperty("--hearth-tile", `${baseTile}px`);
+	// Flag the card body so CSS can disable the card drag overlay over tiles in
+	// arrange mode (tiles are self-contained widgets with their own resize).
+	if (view.arrangeMode) body.addClass("hearth-tiles-arrange");
 	for (const link of links) {
 		const tile = grid.createDiv("hearth-link-tile");
 		applyTileSize(tile, link.sizeW, link.sizeH, link.size, baseTile);
@@ -1148,9 +1151,13 @@ function applyTileSize(
 	}
 }
 
-/** Attach a drag-to-resize corner handle to a tile. Width and height are
- * adjusted independently (drag right grows width, drag down grows height). The
- * legacy single `size` is cleared once independent sizes are written. */
+/** Fine grid (px) that tile sizes snap to, so tiles align like Android widgets. */
+const TILE_GRID = 8;
+
+/** Attach a widget-style resize handle to a tile. The handle is a clear,
+ * grabbable corner grip (bottom-right) that resizes width and height together
+ * on a fine grid. Fully self-contained: stops propagation so the card's drag
+ * engine never interferes. */
 function makeTileResizable(
 	view: HomeView,
 	tile: HTMLElement,
@@ -1164,42 +1171,53 @@ function makeTileResizable(
 ): void {
 	const handle = tile.createDiv("hearth-tile-resize");
 	handle.setAttribute("aria-hidden", "true");
+
+	const stop = (e: PointerEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+	};
+
 	let resizing = false;
 	let startW = 0;
 	let startH = 0;
 	let startX = 0;
 	let startY = 0;
-	handle.addEventListener("click", (e) => e.stopPropagation());
+
 	handle.addEventListener("pointerdown", (e) => {
-		e.preventDefault();
-		e.stopPropagation();
+		stop(e);
 		resizing = true;
 		// Seed from legacy `size` (which used to drive both axes) so a tile
 		// resized before this split still starts from its stored footprint.
 		const legacy = getLegacy();
 		startW = getW() ?? legacy ?? baseTile;
 		if (legacy != null && getW() == null) setW(legacy);
-		startH = getH() ?? legacy ?? baseTile * 0.78;
+		startH = getH() ?? legacy ?? Math.round(baseTile * 0.78);
 		if (legacy != null && getH() == null) setH(legacy);
 		startX = e.clientX;
 		startY = e.clientY;
 		handle.setPointerCapture(e.pointerId);
+		tile.addClass("is-tile-resizing");
 	});
+
 	handle.addEventListener("pointermove", (e) => {
 		if (!resizing) return;
+		e.preventDefault();
+		e.stopPropagation();
 		const dx = e.clientX - startX;
 		const dy = e.clientY - startY;
-		const w = Math.max(50, Math.min(360, Math.round((startW + dx) / 5) * 5));
-		const h = Math.max(44, Math.min(360, Math.round((startH + dy) / 5) * 5));
+		// Snap to the fine grid so tiles stay aligned like widgets.
+		const w = Math.max(baseTile, Math.min(480, snap(startW + dx, TILE_GRID)));
+		const h = Math.max(56, Math.min(480, snap(startH + dy, TILE_GRID)));
 		setW(w === baseTile ? undefined : w);
 		setH(h === Math.round(baseTile * 0.78) ? undefined : h);
-		setLegacy(undefined); // clear the legacy single size once split
+		setLegacy(undefined);
 		tile.style.setProperty("--hearth-tile-w", `${w}px`);
 		tile.style.setProperty("--hearth-tile-h", `${h}px`);
 		const span = Math.max(1, Math.round(w / baseTile));
 		tile.style.gridColumn = span > 1 ? `span ${span}` : "";
 	});
-	const endResize = (e: PointerEvent) => {
+
+	const end = (e: PointerEvent) => {
 		if (!resizing) return;
 		resizing = false;
 		try {
@@ -1207,10 +1225,16 @@ function makeTileResizable(
 		} catch {
 			// pointer already released
 		}
+		tile.removeClass("is-tile-resizing");
 		void view.plugin.saveData(view.plugin.settings);
 	};
-	handle.addEventListener("pointerup", endResize);
-	handle.addEventListener("pointercancel", endResize);
+	handle.addEventListener("pointerup", end);
+	handle.addEventListener("pointercancel", end);
+}
+
+/** Snap a value to the nearest multiple of `grid`. */
+function snap(value: number, grid: number): number {
+	return Math.round(value / grid) * grid;
 }
 
 function openLink(view: HomeView, link: LinkItem): void {
@@ -1242,6 +1266,7 @@ function renderCommands(view: HomeView, card: DashboardCard, body: HTMLElement):
 	const grid = body.createDiv("hearth-links hearth-tiles-sized");
 	const baseTile = card.tileSize && card.tileSize > 0 ? card.tileSize : 90;
 	grid.style.setProperty("--hearth-tile", `${baseTile}px`);
+	if (view.arrangeMode) body.addClass("hearth-tiles-arrange");
 	for (const cmd of commands) {
 		const tile = grid.createDiv("hearth-link-tile");
 		// A per-tile size overrides the card default: it drives the tile's own

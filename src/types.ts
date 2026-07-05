@@ -347,8 +347,8 @@ export const DEFAULT_SETTINGS: HomeSettings = {
 
 	backgroundKind: "default",
 	backgroundValue: "",
-	backgroundOpacity: 0.4,
-	backgroundBlur: 0,
+	backgroundOpacity: 0.8,
+	backgroundBlur: 20,
 
 	openOnStartup: true,
 	replaceNewTabs: true,
@@ -567,7 +567,8 @@ export function migrateSettings(s: HomeSettings, raw: Record<string, unknown>): 
 	}
 	if (typeof s.rowHeight !== "number" || s.rowHeight <= 0) s.rowHeight = 92;
 	if (typeof s.cardOpacity !== "number") s.cardOpacity = 0.6;
-	if (typeof s.backgroundOpacity !== "number") s.backgroundOpacity = 0.4;
+	if (typeof s.backgroundOpacity !== "number") s.backgroundOpacity = 0.8;
+	if (typeof s.backgroundBlur !== "number") s.backgroundBlur = 20;
 	// Fit-to-page is the default for fresh installs; existing users keep their
 	// choice (only backfill when the field is missing entirely).
 	if (typeof raw.fitToPage !== "boolean") s.fitToPage = true;
