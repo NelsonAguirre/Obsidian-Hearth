@@ -448,8 +448,11 @@
 
 /* When a card body holds a read-only embed/daily-note host directly, the host
  * is the scroll container (one vertical scrollbar) — the body itself doesn't
- * scroll, so it can't stack a second scrollbar next to the embed's. */
-.hearth-card-body:has(> .hearth-embed) {
+ * scroll, so it can't stack a second scrollbar next to the embed's. The same
+ * applies to the editable embed wrapper (.hearth-jot), whose preview/textarea
+ * handle their own scrolling. */
+.hearth-card-body:has(> .hearth-embed),
+.hearth-card-body:has(> .hearth-jot) {
 	overflow: hidden;
 }
 
@@ -763,9 +766,12 @@
 }
 
 /* Text / jot-down: a rendered Markdown preview that swaps to a textarea on
- * double-click (so links in the preview stay clickable). */
+ * double-click (so links in the preview stay clickable). The wrapper fills
+ * the card body; exactly one of preview/textarea is shown at a time, and that
+ * one is the single scroll container (one vertical scrollbar). */
 .hearth-jot {
 	height: 100%;
+	overflow: hidden;
 }
 
 .hearth-jot-preview {
