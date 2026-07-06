@@ -1946,14 +1946,15 @@ function renderTaskKanban(
 				}
 				moveTo(from, col);
 			});
+			// Recurring TaskNotes tasks get a per-occurrence completion checkbox
+			// at the top of the card (before the text), in addition to drag:
+			// checking it completes today's instance and advances scheduled
+			// without retiring the task.
+			if (source !== "checkbox" && hit.recurrence) {
+				renderRecurringCheckbox(view, hit, today, cardEl, refresh);
+			}
 			cardEl.createDiv({ cls: "hearth-kanban-card-text", text: hit.text || hit.file.basename });
 			const meta = cardEl.createDiv("hearth-kanban-card-meta");
-			// Recurring TaskNotes tasks get a per-occurrence completion checkbox
-			// on the card (in addition to drag): checking it completes today's
-			// instance and advances scheduled without retiring the task.
-			if (source !== "checkbox" && hit.recurrence) {
-				renderRecurringCheckbox(view, hit, today, meta, refresh);
-			}
 			if (hit.priority) renderPriority(meta, hit.priority);
 			const dueLabel = formatDueLabel(hit);
 			if (dueLabel) {
@@ -2238,10 +2239,36 @@ async function completeRecurringInstance(view: HomeView, hit: TaskHit): Promise<
 	}
 }
 
+/** Undo today's completion of a recurring TaskNotes task: remove today from
+ * `complete_instances` and roll `scheduled` back to today (the occurrence we
+ * just un-completed). Used when the user unchecks the box to cancel a
+ * mistaken completion. */
+async function uncompleteRecurringInstance(view: HomeView, hit: TaskHit): Promise<void> {
+	if (!hit.recurrence) return;
+	const today: string = moment().format("YYYY-MM-DD");
+	try {
+		await view.app.fileManager.processFrontMatter(hit.file, (fm) => {
+			const cur = typeof fm["scheduled"] === "string" ? String(fm["scheduled"]) : null;
+			const timeMatch = cur ? /T(\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?Z?)\s*$/.exec(cur) : null;
+			const instances = Array.isArray(fm["complete_instances"])
+				? fm["complete_instances"].map((v: unknown) => String(v)).filter((d) => d !== today)
+				: [];
+			fm["complete_instances"] = instances;
+			// Restore the occurrence date the checkbox represents (today),
+			// keeping any time component the task already had.
+			fm["scheduled"] = timeMatch ? `${today}T${timeMatch[1]}` : today;
+		});
+	} catch {
+		new Notice("Hearth: couldn't undo the recurring task completion.");
+	}
+}
+
 /** Render a small checkbox that completes today's occurrence of a recurring
- * TaskNotes task on check. Pre-checked when today is already in
- * complete_instances. Stops propagation so it never triggers the row/card click
- * or drag. */
+ * TaskNotes task on check, and undoes it on uncheck (removes today from
+ * complete_instances and rolls scheduled back to today). Pre-checked when
+ * today is already in complete_instances. Stops propagation so it never
+ * triggers the row/card click or drag. Rendered as the first child of `parent`
+ * so it sits before the task text. */
 function renderRecurringCheckbox(
 	view: HomeView,
 	hit: TaskHit,
@@ -2253,16 +2280,24 @@ function renderRecurringCheckbox(
 		cls: "hearth-task-check hearth-task-check-recurring",
 		attr: { type: "checkbox", "aria-label": "Mark today's occurrence complete" },
 	});
+	// Move it to the very front so it leads the task text regardless of what
+	// the caller appends afterwards.
+	parent.insertBefore(check, parent.firstChild);
 	check.checked = (hit.completeInstances ?? []).includes(today);
-	check.addEventListener("click", (e) => e.stopPropagation());
-	check.addEventListener("mousedown", (e) => e.stopPropagation());
-	check.addEventListener("pointerdown", (e) => e.stopPropagation());
+	const stop = (e: Event) => e.stopPropagation();
+	check.addEventListener("click", stop);
+	check.addEventListener("mousedown", stop as EventListener);
+	check.addEventListener("pointerdown", stop as EventListener);
 	check.addEventListener("change", () => {
-		if (!check.checked) {
-			check.checked = true;
-			return;
+		const wasChecked = (hit.completeInstances ?? []).includes(today);
+		if (check.checked && !wasChecked) {
+			void completeRecurringInstance(view, hit).then(refresh);
+		} else if (!check.checked && wasChecked) {
+			void uncompleteRecurringInstance(view, hit).then(refresh);
+		} else {
+			// State already matches the data — keep the checkbox in sync.
+			check.checked = wasChecked;
 		}
-		void completeRecurringInstance(view, hit).then(refresh);
 	});
 }
 

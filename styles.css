@@ -442,12 +442,15 @@
 .hearth-card-body {
 	flex: 1;
 	min-height: 0;
-	/* Only one scroll container per card: vertical. Horizontal overflow is
-	 * clipped so wide content (tables/code) doesn't add a second scrollbar at
-	 * the card level — those elements carry their own inner scroll instead. */
-	overflow-y: auto;
-	overflow-x: hidden;
+	overflow: auto;
 	padding: 12px 14px;
+}
+
+/* When a card body holds a read-only embed/daily-note host directly, the host
+ * is the scroll container (one vertical scrollbar) — the body itself doesn't
+ * scroll, so it can't stack a second scrollbar next to the embed's. */
+.hearth-card-body:has(> .hearth-embed) {
+	overflow: hidden;
 }
 
 /* Empty states */
@@ -477,11 +480,13 @@
 	font-size: 0.85rem;
 }
 
-/* Embeds: the card body is the sole scroll container. Keep the embed host
- * non-scrolling so a theme's `.markdown-rendered` overflow can't stack a
- * second vertical scrollbar next to the body's. */
+/* Embeds: the host is the single scroll container for embedded content, so a
+ * theme's `.markdown-rendered` overflow can't stack a second vertical scrollbar
+ * next to it. Fills the body and scrolls within. */
 .hearth-embed {
-	overflow: visible;
+	overflow: auto;
+	height: 100%;
+	max-height: 100%;
 }
 
 .hearth-embed img,
@@ -491,15 +496,11 @@
 }
 
 /* Per-card zoom: anchor at the top-left and widen inversely so scaled-up
- * content fills the card. The scaled host becomes its own scroll container
- * (both axes) so zoomed-in content stays reachable — the body is vertical-
- * scroll-only and would otherwise clip the widened box. */
+ * content fills the card before scaling (the embed host scrolls any overflow). */
 .hearth-embed.is-scaled {
 	transform: scale(var(--hearth-embed-scale, 1));
 	transform-origin: top left;
 	width: calc(100% / var(--hearth-embed-scale, 1));
-	overflow: auto;
-	max-height: 100%;
 }
 
 /* Editable embed: a plain textarea bound to the note's file. Uses a monospace
@@ -682,10 +683,14 @@
 	margin: 0;
 }
 
-/* Recurring-task completion checkbox (TaskNotes). Same size as the regular
- * task checkbox; a touch of right margin when it leads the kanban card meta. */
+/* Recurring-task completion checkbox (TaskNotes). Sits before the task text;
+ * in a kanban card it leads the column so it reads like a checklist item. */
 .hearth-task-check-recurring {
 	margin-right: 2px;
+}
+
+.hearth-kanban-card > .hearth-task-check-recurring {
+	align-self: flex-start;
 }
 
 .hearth-task-due {
