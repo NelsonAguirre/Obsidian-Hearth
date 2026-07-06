@@ -492,11 +492,18 @@
 
 /* Embeds: the host is the single scroll container for embedded content, so a
  * theme's `.markdown-rendered` overflow can't stack a second vertical scrollbar
- * next to it. Fills the body and scrolls within. */
+ * next to it. Fills the body and scrolls vertically only — horizontal overflow
+ * is clipped so text wraps (code blocks scroll within themselves via Obsidian's
+ * own `pre` styling). */
 .hearth-embed {
-	overflow: auto;
+	overflow-y: auto;
+	overflow-x: hidden;
 	height: 100%;
 	max-height: 100%;
+	/* Break long unbroken strings (URLs, paths) so they wrap instead of
+	 * forcing horizontal scroll. */
+	overflow-wrap: break-word;
+	word-break: break-word;
 }
 
 .hearth-embed img,
