@@ -310,17 +310,29 @@ function renderEditableEmbed(
 	area.hide();
 
 	// `saving` guards against reacting to our own writes; `editing` tracks whether
-	// the raw editor is open.
+	// the raw editor is open; `lastSaved` is the content we last wrote so a
+	// no-op leave doesn't trigger a redundant write (and modify event).
 	let saving = false;
 	let editing = false;
+	let lastSaved: string | null = null;
 	let previewChild: Component | null = null;
+	// Monotonic token so overlapping renders (e.g. leaveEdit + a modify event
+	// firing together) can't clobber each other. Only the latest render creates
+	// a component and touches the DOM; stale in-flight renders bail out. Without
+	// this, an earlier render could finish against a component that a later
+	// render already unloaded, which drops async content like fenced code blocks.
+	let renderToken = 0;
 
 	const renderPreview = () => {
-		if (previewChild) component.removeChild(previewChild);
-		previewChild = new Component();
-		component.addChild(previewChild);
-		preview.empty();
+		const token = ++renderToken;
+		if (previewChild) {
+			component.removeChild(previewChild);
+			previewChild = null;
+		}
 		void view.app.vault.cachedRead(file).then((raw) => {
+			// A newer render superseded this one — leave the DOM to the winner.
+			if (token !== renderToken) return;
+			preview.empty();
 			const md = stripFrontmatter(raw);
 			if (!md.trim()) {
 				preview.addClass("is-empty");
@@ -328,14 +340,21 @@ function renderEditableEmbed(
 				return;
 			}
 			preview.removeClass("is-empty");
-			void MarkdownRenderer.render(view.app, md, preview, file.path, previewChild!);
+			previewChild = new Component();
+			component.addChild(previewChild);
+			void MarkdownRenderer.render(view.app, md, preview, file.path, previewChild);
 		});
 	};
 
 	const flush = () => {
+		// Nothing changed since our last write — skip it, so a bare
+		// double-click-then-leave doesn't fire a self-modify event that races
+		// the leaveEdit re-render.
+		if (lastSaved !== null && area.value === lastSaved) return;
 		const current = view.app.vault.getAbstractFileByPath(file.path);
 		if (current instanceof TFile) {
 			saving = true;
+			lastSaved = area.value;
 			void view.app.vault.modify(current, area.value).finally(() => {
 				saving = false;
 			});
@@ -345,6 +364,7 @@ function renderEditableEmbed(
 	const enterEdit = () => {
 		void view.app.vault.read(file).then((content) => {
 			area.value = content;
+			lastSaved = content;
 			editing = true;
 			preview.hide();
 			area.show();
@@ -373,6 +393,7 @@ function renderEditableEmbed(
 				if (area.ownerDocument.activeElement !== area) {
 					void view.app.vault.read(file).then((content) => {
 						area.value = content;
+						lastSaved = content;
 					});
 				}
 			} else {
