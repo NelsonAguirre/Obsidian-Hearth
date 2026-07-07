@@ -343,9 +343,19 @@ function renderEditableEmbed(
 				return;
 			}
 			preview.removeClass("is-empty");
+			// Render into a FRESH child node each time rather than into `preview`
+			// itself. Some third-party code-block processors dedupe re-renders by
+			// the block's parent element — e.g. Numerals keeps a
+			// WeakMap<parentEl, source> and, on seeing the same source under the
+			// same parent, removes the block instead of rendering it. Reusing
+			// `preview` (we only empty() it) kept the parent identical across
+			// renders, so leaving raw edit made the math block dedupe itself away
+			// until an unrelated full re-render built a new preview node. A new
+			// content node per render gives each block a fresh parent.
+			const content = preview.createDiv("markdown-rendered");
 			previewChild = new Component();
 			component.addChild(previewChild);
-			void MarkdownRenderer.render(view.app, md, preview, file.path, previewChild);
+			void MarkdownRenderer.render(view.app, md, content, file.path, previewChild);
 		});
 	};
 
@@ -379,13 +389,7 @@ function renderEditableEmbed(
 		editing = false;
 		area.hide();
 		preview.show();
-		// Defer to the next frame so the just-un-hidden preview is laid out
-		// before we render into it. Third-party code-block processors (e.g.
-		// Numerals' `math` block) render/measure against the element and come up
-		// empty if it's still the zero-box it was while hidden. A plain fenced
-		// block doesn't measure, so it rendered fine without this; math blocks
-		// otherwise only reappeared after an unrelated re-render (arrange toggle).
-		activeWindow.requestAnimationFrame(() => renderPreview());
+		renderPreview();
 	};
 
 	// Double-click (not single) so links in the preview stay clickable.
