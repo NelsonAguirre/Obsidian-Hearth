@@ -332,6 +332,9 @@ function renderEditableEmbed(
 		void view.app.vault.cachedRead(file).then((raw) => {
 			// A newer render superseded this one — leave the DOM to the winner.
 			if (token !== renderToken) return;
+			// The card was torn down while we were reading — don't render into a
+			// detached node.
+			if (!preview.isConnected) return;
 			preview.empty();
 			const md = stripFrontmatter(raw);
 			if (!md.trim()) {
@@ -376,7 +379,13 @@ function renderEditableEmbed(
 		editing = false;
 		area.hide();
 		preview.show();
-		renderPreview();
+		// Defer to the next frame so the just-un-hidden preview is laid out
+		// before we render into it. Third-party code-block processors (e.g.
+		// Numerals' `math` block) render/measure against the element and come up
+		// empty if it's still the zero-box it was while hidden. A plain fenced
+		// block doesn't measure, so it rendered fine without this; math blocks
+		// otherwise only reappeared after an unrelated re-render (arrange toggle).
+		activeWindow.requestAnimationFrame(() => renderPreview());
 	};
 
 	// Double-click (not single) so links in the preview stay clickable.
