@@ -9,9 +9,11 @@ cards: embeds, web pages, tasks, calendars, stats, clocks, launchpads and more.
 
 ## Screenshots
 
-![Dashboard](assets/4.png)
+![Fullnew](assets/7.png)
 
 ![Simple](assets/1.png)
+
+![Dashboard](assets/4.png)
 
 ![Cards](assets/6.png)
 
