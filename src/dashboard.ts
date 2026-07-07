@@ -19,8 +19,8 @@ import {
 } from "./types";
 import {
 	applyCardPosition,
+	applyCardPositionFitted,
 	applyEdgeMerging,
-	clampCardToBoard,
 	enableDragResize,
 	ensureFreeform,
 	ensureLayout,
@@ -124,39 +124,32 @@ export function renderDashboard(
 	const remerge = () => applyEdgeMerging(grid);
 	component.registerDomEvent(window, "resize", debounce(remerge, 120, true));
 
-	// In fit-to-page mode, recover any card that's stuck outside the visible
-	// board (e.g. from a layout import, a pane resize, or a glitched drag) by
-	// clamping it back in and persisting.
+	// In fit-to-page mode the board is locked to one screen, so a card placed
+	// (or imported) below the fold would be clipped. Nudge every card's rendered
+	// box inside the current board height so nothing hides off-screen.
 	//
-	// This must run against the board's FINAL laid-out height. Doing it
-	// synchronously during render (as before) measured the pane before the
-	// workspace had finished restoring — right after a PC start, plugin update
-	// or full sync — so cards were clamped to a too-small height and their
-	// upward-shifted positions were saved, nudging the whole board up. Instead,
-	// observe the grid's real size and only clamp once it has settled: a
-	// ResizeObserver fires with the final size after layout (and again on
-	// genuine resizes), and the debounce coalesces the startup size thrash so
-	// we never act on a transient measurement. A zero height means "not laid
-	// out yet" — skip it so stored positions are never corrupted.
+	// This is purely visual — it never writes back to the stored geometry. An
+	// earlier version clamped and persisted against the measured board height,
+	// but on a PC start, plugin update or full sync the workspace restores panes
+	// before they reach their final size. The board was briefly short, cards got
+	// clamped to that too-small height, and the upward-shifted positions were
+	// saved — permanently pushing the whole board up (and compounding, since the
+	// true positions were overwritten). Re-fitting on layout changes without
+	// persisting means a transient/too-small measurement can't corrupt anything:
+	// once the pane reaches its real height the next call repositions every card
+	// from its untouched stored geometry, so the board self-heals.
 	if (fit) {
-		const recoverFit = debounce(() => {
+		const refit = () => {
 			if (!grid.isConnected) return;
 			const boardH = grid.clientHeight;
 			if (boardH <= 0) return;
-			let recovered = false;
 			for (const card of cards) {
-				if (clampCardToBoard(card, boardH)) {
-					recovered = true;
-					const el = gridLayout.elements.get(card);
-					if (el) applyCardPosition(el, card);
-				}
+				const el = gridLayout.elements.get(card);
+				if (el) applyCardPositionFitted(el, card, boardH);
 			}
-			if (recovered) {
-				applyEdgeMerging(grid);
-				void view.plugin.saveData(s);
-			}
-		}, 250, false);
-		const observer = new ResizeObserver(() => recoverFit());
+			applyEdgeMerging(grid);
+		};
+		const observer = new ResizeObserver(debounce(refit, 60, false));
 		observer.observe(grid);
 		component.register(() => observer.disconnect());
 	}

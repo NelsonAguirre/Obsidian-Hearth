@@ -110,52 +110,34 @@ export function applyCardPosition(el: HTMLElement, card: DashboardCard): void {
 	el.style.height = `${Math.max(MIN_H_PX, card.fh ?? MIN_H_PX)}px`;
 }
 
-/** Clamp a card's stored geometry so it can't sit (or stay) outside the board.
- * Horizontal: fx/fw are fractions of the board width — keep fx in [0, 1-fw].
- * Vertical: in fit-to-page mode `boardHeight` is the visible board height (px);
- * clamp fy/fh so the card stays fully inside. Out-of-place cards (e.g. from a
- * layout import, a pane resize, or a glitched drag) are pulled back in. Returns
- * true if anything changed (so the caller can persist). */
-export function clampCardToBoard(card: DashboardCard, boardHeight: number | null): boolean {
-	let changed = false;
-	const fw = clamp(card.fw ?? 0.25, 0.02, 1);
-	const fx = clamp(card.fx ?? 0, 0, Math.max(0, 1 - fw));
-	if (fx !== (card.fx ?? 0)) {
-		card.fx = fx;
-		changed = true;
-	}
-	if (fw !== (card.fw ?? 0.25)) {
-		card.fw = fw;
-		changed = true;
-	}
-	// Vertical: never let a card sit above the top.
-	const fy = Math.max(0, card.fy ?? 0);
-	if (fy !== (card.fy ?? 0)) {
-		card.fy = fy;
-		changed = true;
-	}
-	const fh = Math.max(MIN_H_PX, card.fh ?? MIN_H_PX);
-	if (fh !== (card.fh ?? MIN_H_PX)) {
-		card.fh = fh;
-		changed = true;
-	}
-	// In fit-to-page mode, also keep the card inside the visible board height.
-	if (boardHeight != null && boardHeight > 0) {
-		const maxTop = Math.max(0, boardHeight - fh);
-		const curFy = card.fy ?? fy;
-		if (curFy > maxTop) {
-			card.fy = maxTop;
-			changed = true;
-		}
-		// If the card is taller than the board, shrink it to fit.
-		const curFh = card.fh ?? fh;
-		const finalFy = card.fy ?? maxTop;
-		if (finalFy + curFh > boardHeight) {
-			card.fh = Math.max(MIN_H_PX, boardHeight - finalFy);
-			changed = true;
-		}
-	}
-	return changed;
+/** Position a card, visually clamped into a fit-to-page board of the given
+ * height, WITHOUT mutating or persisting the card's stored geometry.
+ *
+ * This is deliberately non-destructive. Fitting used to clamp the stored
+ * fy/fh and save them, but the clamp bound came from a *measured* board height.
+ * On a PC start, plugin update or full sync the workspace restores panes before
+ * they reach their final size, so the board is briefly short; clamping to that
+ * transient height (and only ever upward) permanently shoved the bottom cards
+ * up and — because the true positions were overwritten — the drift compounded
+ * and never recovered. Keeping the clamp render-only means a wrong transient
+ * measurement can't corrupt anything: once the pane reaches its real height the
+ * next call repositions every card from its untouched stored geometry. */
+export function applyCardPositionFitted(
+	el: HTMLElement,
+	card: DashboardCard,
+	boardHeight: number | null,
+): void {
+	// Horizontal placement (fx/fw, board-width fractions) is resolution- and
+	// timing-independent, so always apply it straight from the stored values.
+	applyCardPosition(el, card);
+	if (boardHeight == null || boardHeight <= 0) return;
+
+	// Vertically nudge the rendered box inside the visible board. Stored fy/fh
+	// stay put — only the inline top/height shown this frame are adjusted.
+	const fh = Math.min(Math.max(MIN_H_PX, card.fh ?? MIN_H_PX), boardHeight);
+	const top = Math.min(Math.max(0, card.fy ?? 0), Math.max(0, boardHeight - fh));
+	el.style.top = `${top}px`;
+	el.style.height = `${fh}px`;
 }
 
 /** Total pixel height the board needs to show every card. */
