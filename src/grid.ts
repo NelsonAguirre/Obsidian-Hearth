@@ -208,25 +208,35 @@ export function applyCardPositionFitted(
 	el: HTMLElement,
 	card: DashboardCard,
 	vScale: number,
+	boardWidth: number,
 ): void {
-	// Horizontal placement (fx/fw, board-width fractions) is resolution- and
-	// timing-independent, so always apply it straight from the stored values.
-	applyCardPosition(el, card);
-	if (!(vScale < 1)) return;
+	// Horizontal placement. When the board width is known, snap the LEFT and
+	// RIGHT edges to whole pixels (deriving the width from them) so two
+	// side-by-side cards share the exact same pixel. Percentage widths round
+	// left and width independently, so `round(left) + round(width)` and the
+	// neighbour's `round(left)` can land a pixel apart — the thin vertical seam
+	// between adjacent cards. Fall back to percentages if the width isn't known.
+	const fx = clamp(card.fx ?? 0, 0, 1);
+	const fw = clamp(card.fw ?? 0.25, 0.02, 1);
+	const leftFrac = clamp(fx, 0, 1 - fw);
+	if (boardWidth > 0) {
+		const left = Math.round(leftFrac * boardWidth);
+		const right = Math.round((leftFrac + fw) * boardWidth);
+		el.style.left = `${left}px`;
+		el.style.width = `${Math.max(1, right - left)}px`;
+	} else {
+		el.style.left = `${leftFrac * 100}%`;
+		el.style.width = `${fw * 100}%`;
+	}
 
-	// Squeeze the vertical layout to fit. Stored fy/fh stay put — only the inline
-	// top/height shown this frame are scaled, preserving relative spacing.
-	//
-	// Round the top and the BOTTOM (not top and height) to whole pixels. Scaling
-	// top and height independently rounds each to its own device pixel, so a
-	// card's scaled bottom edge and the next card's scaled top edge can land one
-	// pixel apart — the thin gap seen between snapped cards in fit-to-page mode.
-	// Deriving the height from two shared, rounded edges makes touching cards
-	// meet on the exact same pixel, so the seam disappears.
+	// Vertical placement. Snap the TOP and BOTTOM edges the same way so stacked
+	// cards meet on the exact pixel too. When the layout overflows the board
+	// (vScale < 1) the edges are scaled first; otherwise they're used as-is.
+	const scale = vScale < 1 ? vScale : 1;
 	const fy = Math.max(0, card.fy ?? 0);
 	const fh = card.fh ?? MIN_H_PX;
-	const top = Math.round(fy * vScale);
-	const bottom = Math.round((fy + fh) * vScale);
+	const top = Math.round(fy * scale);
+	const bottom = Math.round((fy + fh) * scale);
 	el.style.top = `${top}px`;
 	el.style.height = `${Math.max(MIN_H_PX, bottom - top)}px`;
 }
