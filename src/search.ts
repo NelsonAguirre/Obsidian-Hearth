@@ -79,7 +79,18 @@ export class SearchSection {
 		// results list ends up behind the keyboard.
 		if (Platform.isMobile) {
 			const root = this.view.contentEl;
-			this.inputEl.addEventListener("focus", () => root.addClass("hearth-search-active"));
+			this.inputEl.addEventListener("focus", () => {
+				root.addClass("hearth-search-active");
+				// Pull the field to the top of the scroll area once the keyboard has
+				// animated up, so the results dropdown below it lands in the visible
+				// area above the keyboard instead of behind it. The delay lets the
+				// viewport settle first; the CSS anchor handles the rest immediately.
+				window.setTimeout(() => {
+					if (root.ownerDocument.activeElement === this.inputEl) {
+						this.inputEl.scrollIntoView({ block: "start" });
+					}
+				}, 300);
+			});
 			this.inputEl.addEventListener("blur", () => {
 				// Delay so a tap that lands on a result fires before the layout
 				// shifts back (blur precedes the result's click on the same tap).

@@ -401,15 +401,11 @@
 	border-radius: 14px;
 	border: 1px solid var(--background-modifier-border);
 	/* --card-opacity (0..1) tints the card surface without dimming content. */
-	--hearth-card-fill: color-mix(in srgb, var(--background-primary) calc(var(--card-opacity, 1) * 100%), transparent);
-	background: var(--hearth-card-fill);
-	/* Composable shadow: an optional 1px seam-filler on the right edge (bridges
-	 * the sub-pixel gap that percentage widths leave between side-by-side cards)
-	 * plus the card's drop shadow. Both default off/normal and are overridden by
-	 * the merge rules below. */
-	--hearth-card-seam-right: 0 0 0 0 transparent;
+	background: color-mix(in srgb, var(--background-primary) calc(var(--card-opacity, 1) * 100%), transparent);
+	/* Drop shadow via a variable so merged edges can drop it (see below) and
+	 * hover can lift it without re-declaring the whole shadow. */
 	--hearth-card-lift: 0 2px 12px rgba(0, 0, 0, 0.06);
-	box-shadow: var(--hearth-card-seam-right), var(--hearth-card-lift);
+	box-shadow: var(--hearth-card-lift);
 	overflow: hidden;
 	transition: box-shadow 120ms ease, transform 120ms ease;
 }
@@ -1548,11 +1544,14 @@
 }
 
 .hearth-view.hearth-search-active .hearth-scroll,
-.hearth-view.hearth-search-active.hearth-mobile-only .hearth-scroll {
+.hearth-view.hearth-kbd-open .hearth-scroll {
 	justify-content: flex-start;
+	/* Let the field/results scroll into the visible area above the keyboard. */
+	overflow-y: auto;
 }
 
-.hearth-view.hearth-search-active.hearth-mobile-only .hearth-inner {
+.hearth-view.hearth-search-active .hearth-inner,
+.hearth-view.hearth-kbd-open .hearth-inner {
 	justify-content: flex-start;
 }
 
@@ -1650,17 +1649,6 @@
 .hearth-card.merge-left,
 .hearth-card.merge-right {
 	--hearth-card-lift: 0 0 0 0 transparent;
-}
-
-/* Side-by-side cards are positioned with percentage widths, so the left card's
- * right edge and the right card's left edge round to device pixels
- * independently and can leave a 1px gap the transparent borders don't fill
- * (stacked cards use pixel coords and are pixel-snapped in grid.ts instead).
- * Bridge it by extending 1px of the card surface past the right edge — only on
- * the left card of the pair (merge-right), so the fill is drawn exactly once
- * (no doubled translucency). */
-.hearth-card.merge-right {
-	--hearth-card-seam-right: 1px 0 0 0 var(--hearth-card-fill);
 }
 
 .hearth-card-body.has-bg {

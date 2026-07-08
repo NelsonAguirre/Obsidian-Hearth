@@ -149,9 +149,10 @@ export function renderDashboard(
 			// overlap when the window is made short (clamping each card on its own
 			// piled them at the top).
 			const vScale = fitVerticalScale(cards, grid.clientHeight);
+			const boardWidth = grid.clientWidth;
 			for (const card of cards) {
 				const el = gridLayout.elements.get(card);
-				if (el) applyCardPositionFitted(el, card, vScale);
+				if (el) applyCardPositionFitted(el, card, vScale, boardWidth);
 			}
 			applyEdgeMerging(grid);
 		};
