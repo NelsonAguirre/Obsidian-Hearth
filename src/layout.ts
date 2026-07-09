@@ -1,6 +1,7 @@
 import {
 	BackgroundConfig,
 	BackgroundKind,
+	CalculatorConfig,
 	CalendarConfig,
 	CardKind,
 	ClockConfig,
@@ -61,6 +62,7 @@ const CARD_KINDS: CardKind[] = [
 	"stats",
 	"search",
 	"heatmap",
+	"calculator",
 ];
 
 /** Serialize the whole dashboard setup to a pretty JSON string. */
@@ -189,6 +191,9 @@ function sanitizeCard(raw: unknown, index: number): DashboardCard | null {
 	if (r.heatmap && typeof r.heatmap === "object") {
 		card.heatmap = sanitizeHeatmap(r.heatmap as Record<string, unknown>);
 	}
+	if (r.calculator && typeof r.calculator === "object") {
+		card.calculator = sanitizeCalculator(r.calculator as Record<string, unknown>);
+	}
 
 	return card;
 }
@@ -269,6 +274,25 @@ function sanitizeHeatmap(r: Record<string, unknown>): HeatmapConfig {
 	const cfg: HeatmapConfig = {};
 	if (r.metric === "modified" || r.metric === "created") cfg.metric = r.metric;
 	if (typeof r.weeks === "number") cfg.weeks = r.weeks;
+	return cfg;
+}
+
+function sanitizeCalculator(r: Record<string, unknown>): CalculatorConfig {
+	const cfg: CalculatorConfig = {};
+	if (r.angleUnit === "deg" || r.angleUnit === "rad") cfg.angleUnit = r.angleUnit;
+	const lastInput = str(r.lastInput);
+	if (lastInput !== undefined) cfg.lastInput = lastInput;
+	if (Array.isArray(r.history)) {
+		cfg.history = r.history
+			.map((h) => {
+				if (!h || typeof h !== "object") return null;
+				const hr = h as Record<string, unknown>;
+				const expr = str(hr.expr);
+				const result = str(hr.result);
+				return expr !== undefined && result !== undefined ? { expr, result } : null;
+			})
+			.filter((h): h is NonNullable<typeof h> => h !== null);
+	}
 	return cfg;
 }
 

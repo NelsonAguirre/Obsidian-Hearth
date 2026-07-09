@@ -239,6 +239,38 @@ export class CardSettingsModal extends Modal {
 			case "heatmap":
 				this.heatmapEditor(containerEl);
 				break;
+			case "calculator":
+				this.calculatorEditor(containerEl);
+				break;
+		}
+	}
+
+	private calculatorEditor(containerEl: HTMLElement): void {
+		const cfg = (this.card.calculator ??= {});
+		new Setting(containerEl)
+			.setName(t().editors.calculator.angleUnit)
+			.setDesc(t().editors.calculator.angleUnitDesc)
+			.addDropdown((d) => {
+				d.addOption("deg", t().editors.calculator.degrees);
+				d.addOption("rad", t().editors.calculator.radians);
+				d.setValue(cfg.angleUnit ?? "deg").onChange((v) => {
+					cfg.angleUnit = v === "rad" ? "rad" : undefined;
+					this.opts.save();
+					this.opts.rerender();
+				});
+			});
+		if (cfg.history?.length) {
+			new Setting(containerEl)
+				.setName(t().editors.calculator.history)
+				.setDesc(t().editors.calculator.historyDesc)
+				.addButton((b) =>
+					b.setButtonText(t().editors.calculator.clearHistory).onClick(() => {
+						cfg.history = undefined;
+						this.opts.save();
+						this.opts.rerender();
+						this.render();
+					}),
+				);
 		}
 	}
 

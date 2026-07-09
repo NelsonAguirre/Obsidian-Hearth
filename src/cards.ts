@@ -13,6 +13,7 @@ import {
 import type { HomeView } from "./view";
 import type { BookmarkItem } from "./obsidian-ext";
 import { ClockConfig, CommandItem, DashboardCard, LinkItem, TasksConfig } from "./types";
+import { evaluate as evaluateCalc } from "./calculator";
 import { EXCALIDRAW_PLUGIN_ID, iconForFile, isExcalidraw } from "./filetypes";
 import { QueryHit, runQuery, searchFileContents } from "./query";
 import { makeClickable } from "./ui";
@@ -102,6 +103,9 @@ export function renderCardBody(
 			break;
 		case "heatmap":
 			renderHeatmap(view, card, body);
+			break;
+		case "calculator":
+			renderCalculator(view, card, body);
 			break;
 	}
 }
@@ -1155,6 +1159,109 @@ function renderText(
 	});
 
 	renderPreview();
+}
+
+// ---- Calculator ---------------------------------------------------------
+
+/** A free-text calculator: arithmetic, unit conversions and plain-language
+ * queries (à la Wolfram Alpha's input box), evaluated live as you type. */
+function renderCalculator(view: HomeView, card: DashboardCard, body: HTMLElement): void {
+	const cfg = (card.calculator ??= {});
+	const angleUnit = cfg.angleUnit ?? "deg";
+
+	const wrap = body.createDiv("hearth-calc");
+
+	const input = wrap.createEl("input", {
+		cls: "hearth-calc-input",
+		attr: {
+			type: "text",
+			placeholder: t().cards.calculator.placeholder,
+			spellcheck: "false",
+			"aria-label": t().cards.calculator.placeholder,
+		},
+	});
+	input.value = cfg.lastInput ?? "";
+
+	const resultEl = wrap.createDiv("hearth-calc-result");
+	const noteEl = wrap.createDiv("hearth-calc-note");
+	const historyEl = wrap.createDiv("hearth-calc-history");
+
+	const persist = debounce(
+		() => void view.plugin.saveData(view.plugin.settings),
+		600,
+		true,
+	);
+
+	const renderHistory = () => {
+		historyEl.empty();
+		const items = cfg.history ?? [];
+		for (const entry of items) {
+			const row = historyEl.createDiv("hearth-calc-history-row");
+			row.setAttribute("title", t().cards.calculator.reuse);
+			row.createSpan({ cls: "hearth-calc-history-expr", text: entry.expr });
+			row.createSpan({ cls: "hearth-calc-history-eq", text: "=" });
+			row.createSpan({ cls: "hearth-calc-history-result", text: entry.result });
+			row.addEventListener("click", () => {
+				input.value = entry.expr;
+				input.focus();
+				update();
+			});
+		}
+	};
+
+	// Show the live result of the current input (without committing to history).
+	const update = () => {
+		const raw = input.value;
+		cfg.lastInput = raw;
+		if (!raw.trim()) {
+			resultEl.setText("");
+			resultEl.removeClass("is-error");
+			noteEl.setText("");
+			persist();
+			return;
+		}
+		const res = evaluateCalc(raw, { angleUnit });
+		if (res.ok) {
+			resultEl.removeClass("is-error");
+			resultEl.setText(res.formatted);
+			noteEl.setText(res.note ?? "");
+		} else {
+			resultEl.addClass("is-error");
+			resultEl.setText(res.error ? "…" : "");
+			noteEl.setText("");
+		}
+		persist();
+	};
+
+	// Commit the current input to the history on Enter.
+	const commit = () => {
+		const raw = input.value.trim();
+		if (!raw) return;
+		const res = evaluateCalc(raw, { angleUnit });
+		if (!res.ok) return;
+		const history = (cfg.history ??= []);
+		// Drop any prior identical query, then prepend, capped at 20 entries.
+		const existing = history.findIndex((h) => h.expr === raw);
+		if (existing >= 0) history.splice(existing, 1);
+		history.unshift({ expr: raw, result: res.formatted });
+		if (history.length > 20) history.length = 20;
+		renderHistory();
+		input.select();
+		void view.plugin.saveData(view.plugin.settings);
+	};
+
+	input.addEventListener("input", update);
+	input.addEventListener("keydown", (e) => {
+		if (e.key === "Enter") {
+			e.preventDefault();
+			commit();
+		}
+	});
+	// Keep the board's drag/keyboard handlers from stealing typing.
+	input.addEventListener("keydown", (e) => e.stopPropagation());
+
+	renderHistory();
+	update();
 }
 
 // ---- Recent files -------------------------------------------------------

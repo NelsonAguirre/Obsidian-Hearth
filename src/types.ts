@@ -14,7 +14,8 @@ export type CardKind =
 	| "calendar"
 	| "stats"
 	| "search"
-	| "heatmap";
+	| "heatmap"
+	| "calculator";
 
 /** A single command tile inside a "commands" card. */
 export interface CommandItem {
@@ -90,6 +91,24 @@ export interface HeatmapConfig {
 	metric?: "modified" | "created";
 	/** How many weeks back to show. Default 26. */
 	weeks?: number;
+}
+
+/** One remembered line in a calculator card's history. */
+export interface CalcHistoryEntry {
+	/** The raw query the user typed. */
+	expr: string;
+	/** The formatted result that query produced. */
+	result: string;
+}
+
+/** Per-card configuration for a "calculator" card. */
+export interface CalculatorConfig {
+	/** Angle unit assumed by trig functions. Default "deg". */
+	angleUnit?: "deg" | "rad";
+	/** The last query typed, restored when the board reloads. */
+	lastInput?: string;
+	/** Recently evaluated queries, newest first (capped when stored). */
+	history?: CalcHistoryEntry[];
 }
 
 /** Per-card configuration for a "clock" card. All fields are optional; omitted
@@ -190,6 +209,8 @@ export interface DashboardCard {
 	savedSearch?: SavedSearchConfig;
 	/** kind === "heatmap": metric and range. */
 	heatmap?: HeatmapConfig;
+	/** kind === "calculator": angle unit, last input and history. */
+	calculator?: CalculatorConfig;
 
 	// ---- Live content ----
 	/** Auto-refresh interval in seconds for live content (embed / web). 0 or
@@ -502,6 +523,7 @@ export function cloneCard(card: DashboardCard): DashboardCard {
 	if (card.savedSearch) copy.savedSearch = { ...card.savedSearch };
 	if (card.heatmap) copy.heatmap = { ...card.heatmap };
 	if (card.clock) copy.clock = { ...card.clock };
+	if (card.calculator) copy.calculator = { ...card.calculator, history: card.calculator.history ? card.calculator.history.map((h) => ({ ...h })) : undefined };
 	return copy;
 }
 
