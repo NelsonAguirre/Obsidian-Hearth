@@ -846,6 +846,20 @@
 	gap: 6px;
 }
 
+/* Card title takes the row width so an inline priority dot trails it. */
+.hearth-kanban-card-row .hearth-kanban-card-text {
+	flex: 1;
+	min-width: 0;
+}
+
+/* Dot-only priority (Kanban cards): just the coloured dot, nudged to sit on
+   the title's line rather than the top of the row. */
+.hearth-task-priority.is-dot-only {
+	flex-shrink: 0;
+	gap: 0;
+	margin-top: 4px;
+}
+
 .hearth-task-due {
 	flex-shrink: 0;
 	font-size: 0.78rem;
@@ -2205,6 +2219,12 @@
 	height: 14px;
 }
 
+.hearth-kanban-add-form {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
 .hearth-kanban-add-input {
 	width: 100%;
 	resize: none;
@@ -2214,6 +2234,25 @@
 	padding: 6px 8px;
 	font-size: 0.85rem;
 	font-family: inherit;
+}
+
+/* Optional due-date + priority pickers on the add-card form (extended mode). */
+.hearth-kanban-add-meta {
+	display: flex;
+	gap: 6px;
+}
+
+.hearth-kanban-add-due,
+.hearth-kanban-add-prio {
+	flex: 1;
+	min-width: 0;
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	padding: 4px 6px;
+	font-size: 0.78rem;
+	font-family: inherit;
+	color: var(--text-normal);
 }
 
 /* ---- Activity heatmap card ------------------------------------------ */
@@ -2370,7 +2409,17 @@
 	cursor: grab;
 }
 
-.hearth-kanban-col-hide {
+/* Title fills the header so the count + control buttons group on the right. */
+.hearth-kanban-col-title {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.hearth-kanban-col-hide,
+.hearth-kanban-col-done {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -2383,8 +2432,21 @@
 	cursor: pointer;
 }
 
-.hearth-kanban-col-head:hover .hearth-kanban-col-hide {
+.hearth-kanban-col-head:hover .hearth-kanban-col-hide,
+.hearth-kanban-col-head:hover .hearth-kanban-col-done {
 	opacity: 0.8;
+}
+
+/* An active "done column" toggle stays lit even when the header isn't hovered. */
+.hearth-kanban-col-done.is-active {
+	opacity: 1;
+	color: var(--interactive-accent);
+}
+
+/* A column that auto-completes cards gets a subtle accent header. */
+.hearth-kanban-col.is-done-col .hearth-kanban-col-head {
+	color: var(--interactive-accent);
+	border-bottom-color: var(--interactive-accent);
 }
 
 .hearth-kanban-col.is-col-drop-target {

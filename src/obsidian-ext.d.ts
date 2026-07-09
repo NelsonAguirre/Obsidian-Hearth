@@ -26,6 +26,12 @@ declare module "obsidian" {
 	interface FileManager {
 		createNewMarkdownFile(folder: TFolder, baseName?: string): Promise<TFile>;
 		processFrontMatter(file: TFile, fn: (frontmatter: Record<string, unknown>) => void): Promise<void>;
+		/** The folder a new note should be created in for a note made from
+		 * `sourcePath`, respecting the user's "Default location for new notes". */
+		getNewFileParent(sourcePath: string, newFilePath?: string): TFolder;
+		/** Build a wiki/Markdown link to `file` (honoring the user's link
+		 * settings) as it should appear in the note at `sourcePath`. */
+		generateMarkdownLink(file: TFile, sourcePath: string, subpath?: string, alias?: string): string;
 	}
 }
 

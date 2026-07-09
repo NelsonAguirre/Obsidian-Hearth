@@ -125,13 +125,19 @@ toolbar; configure each one from the card itself (title, content, colors, size).
   heading becomes a column and the checkbox items beneath it become cards.
   Read it either as a **list** or as Hearth's own **Kanban board**: drag cards
   between the board's real columns (Hearth rewrites the note, moving the item
-  under the target heading), tick a card to complete it in place, and add new
-  cards straight into a column. Turn on **Tasks-plugin metadata** to parse the
+  under the target heading), tick a card to complete it in place, add new
+  cards straight into a column, and **right-click a card to convert it into its
+  own note** (like the Kanban plugin) — the card becomes a link. A column's
+  **check icon** marks it a *done column*, so cards completed automatically when
+  dragged or added there (and the ones already in it complete at once). Turn on
+  **Tasks-plugin metadata** to parse the
   [obsidian-tasks](https://github.com/obsidian-tasks-group/obsidian-tasks)
   emoji fields inside each card (📅 due, ⏫/🔼/🔽 priority, 🔁 recurrence) so due
-  dates and priorities show and sort — or leave it off to read the board
-  as-is. Everything is written back in Kanban's own format, so the board stays
-  fully editable in the Kanban plugin.
+  dates and priorities show (priority as a single coloured dot beside the
+  title) and sort; in this mode the **add-card form** gains due-date and
+  priority pickers that write those markers straight onto the card. Leave it
+  off to read the board as-is. Everything is written back in Kanban's own
+  format, so the board stays fully editable in the Kanban plugin.
 - **Mini calendar** — a month grid resolved from the core Daily notes plugin's
   format/folder, with a dot on days that already have a note. Optional ISO week
   numbers and an edit-count heatmap tint; click an empty day to create that
@@ -300,6 +306,14 @@ load. Adding a language is a matter of copying `en.ts`, translating the values
 [`src/locales/README.md`](src/locales/README.md) for the walkthrough.
 
 ## Shipped:
+
+> **v1.6.8.4-beta** — Kanban board refinements: right-click a card to
+> **convert it into its own note** (replacing the card with a link, like the
+> Kanban plugin); mark any column a **done column** (its check icon) so cards
+> auto-complete when dragged/added there; the extended-mode **add-card form**
+> gains due-date and priority pickers that write the Tasks markers onto the
+> card; and a card's priority now shows as a single coloured **dot** beside the
+> title instead of a duplicated emoji.
 
 > **v1.6.8.3-beta** — the Tasks card can now read a
 > [Kanban](https://github.com/obsidian-community/obsidian-kanban) plugin board

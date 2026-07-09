@@ -46,6 +46,7 @@ export const en = {
 		couldNotCompleteRecurring: "Hearth: couldn't mark the recurring task instance complete.",
 		couldNotUndoRecurring: "Hearth: couldn't undo the recurring task completion.",
 		couldNotAddKanbanCard: "Hearth: couldn't add the card to the Kanban board.",
+		couldNotConvertCard: "Hearth: couldn't convert the card into a note.",
 		layoutCopied: "Hearth: layout copied to clipboard.",
 		clipboardUnavailable: "Hearth: couldn't access the clipboard.",
 		pasteLayoutFirst: "Hearth: paste a layout to import first.",
@@ -459,15 +460,17 @@ export const en = {
 			layout: "Layout",
 			layoutDesc:
 				"List, or a Kanban board grouped by status. On the board, drag cards " +
-				"between columns, drag column headers to reorder, and use a column's " +
-				"eye icon to hide it.",
+				"between columns, drag column headers to reorder, use a column's eye " +
+				"icon to hide it, and its check icon to make it auto-complete cards. " +
+				"Right-click a card to convert it into its own note.",
 			layoutList: "List",
 			layoutKanban: "Kanban board",
 			kanbanColumns: "Kanban columns",
 			kanbanHidden: (columns: string) => `Hidden: ${columns}`,
+			kanbanDoneColumns: (columns: string) => `Auto-complete: ${columns}`,
 			kanbanCustomOrder: "Custom column order is set.",
 			showAll: "Show all",
-			resetColumns: "Reset column order & visibility",
+			resetColumns: "Reset column order, visibility & done columns",
 			showCompleted: "Show completed",
 			showCompletedKanbanDesc: "Completed tasks always appear in the Done column on a Kanban board.",
 			maxTasks: "Max tasks shown",
@@ -622,6 +625,15 @@ export const en = {
 			recurring: "Recurring",
 			addCard: "Add card",
 			addCardPlaceholder: "Card text…",
+			convertToNote: "Convert to note",
+			setDoneColumn: (label: string) => `Mark "${label}" as a done column`,
+			unsetDoneColumn: (label: string) => `Stop "${label}" auto-completing cards`,
+			dueDate: "Due date",
+			priority: "Priority",
+			priorityNone: "No priority",
+			priorityHigh: "High priority",
+			priorityMedium: "Medium priority",
+			priorityLow: "Low priority",
 		},
 	},
 

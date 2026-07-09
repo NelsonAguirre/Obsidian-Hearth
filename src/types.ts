@@ -71,6 +71,9 @@ export interface TasksConfig {
 	kanbanOrder?: string[];
 	/** Kanban: column keys the user has hidden. */
 	kanbanHidden?: string[];
+	/** Kanban: column keys that mark a card done when it lands in them (dragged
+	 * or added). Toggled per column from the board header. */
+	kanbanDoneColumns?: string[];
 }
 
 /** Per-card configuration for a "calendar" card. */
@@ -530,7 +533,7 @@ export function cloneCard(card: DashboardCard): DashboardCard {
 	};
 	if (card.links) copy.links = card.links.map((l) => ({ ...l }));
 	if (card.commands) copy.commands = card.commands.map((c) => ({ ...c }));
-	if (card.tasks) copy.tasks = { ...card.tasks, folders: card.tasks.folders ? [...card.tasks.folders] : undefined, kanbanOrder: card.tasks.kanbanOrder ? [...card.tasks.kanbanOrder] : undefined, kanbanHidden: card.tasks.kanbanHidden ? [...card.tasks.kanbanHidden] : undefined };
+	if (card.tasks) copy.tasks = { ...card.tasks, folders: card.tasks.folders ? [...card.tasks.folders] : undefined, kanbanOrder: card.tasks.kanbanOrder ? [...card.tasks.kanbanOrder] : undefined, kanbanHidden: card.tasks.kanbanHidden ? [...card.tasks.kanbanHidden] : undefined, kanbanDoneColumns: card.tasks.kanbanDoneColumns ? [...card.tasks.kanbanDoneColumns] : undefined };
 	if (card.calendar) copy.calendar = { ...card.calendar };
 	if (card.savedSearch) copy.savedSearch = { ...card.savedSearch };
 	if (card.heatmap) copy.heatmap = { ...card.heatmap };

@@ -4,6 +4,7 @@ import {
 	getAllTags,
 	MarkdownRenderer,
 	MarkdownView,
+	Menu,
 	moment as createMoment,
 	Notice,
 	setIcon,
@@ -2204,11 +2205,15 @@ function priorityLevel(priority: string): "high" | "medium" | "low" | "other" {
 	return "other";
 }
 
-/** A small colored dot + label showing a task's priority. */
-function renderPriority(parent: HTMLElement, priority: string): void {
+/** A small colored dot showing a task's priority. With `dotOnly` (used by
+ * Kanban cards, whose priority is an emoji rather than a word) it renders just
+ * the coloured dot inline, with the raw value in the tooltip; otherwise it also
+ * shows the value as a label. */
+function renderPriority(parent: HTMLElement, priority: string, dotOnly = false): void {
 	const chip = parent.createDiv(`hearth-task-priority is-${priorityLevel(priority)}`);
+	if (dotOnly) chip.addClass("is-dot-only");
 	chip.createDiv("hearth-task-priority-dot");
-	chip.createSpan({ cls: "hearth-task-priority-label", text: priority });
+	if (!dotOnly) chip.createSpan({ cls: "hearth-task-priority-label", text: priority });
 	chip.setAttribute("title", `Priority: ${priority}`);
 }
 
@@ -2334,7 +2339,9 @@ function renderTaskRow(
 	row.createDiv({ cls: "hearth-list-label hearth-task-text", text: hit.text || hit.file.basename });
 	// Kanban cards show the board column they belong to as a small badge.
 	if (hit.boardColumn) row.createDiv({ cls: "hearth-task-status hearth-task-column", text: hit.boardColumn });
-	if (hit.priority) renderPriority(row, hit.priority);
+	// Kanban priorities are emoji, so show just the coloured dot; TaskNotes
+	// priorities are words, so keep the labelled chip.
+	if (hit.priority) renderPriority(row, hit.priority, !!hit.boardColumn);
 	const dueLabel = formatDueLabel(hit);
 	if (dueLabel) {
 		const due = row.createDiv({ cls: "hearth-task-due", text: dueLabel });
@@ -2349,6 +2356,8 @@ function renderTaskRow(
 	const open = () => void openTask(view, hit);
 	row.addEventListener("click", open);
 	makeClickable(row, open, hit.text || hit.file.basename);
+	// Kanban list rows get the same right-click "convert to note" as board cards.
+	if (hit.boardColumn && hit.line >= 0) attachKanbanCardMenu(view, hit, row, refresh);
 }
 
 /** A Kanban board: tasks grouped into status columns, draggable between them.
@@ -2424,6 +2433,8 @@ function renderTaskKanban(
 	const persist = () => void view.plugin.saveData(view.plugin.settings);
 	const hidden = new Set(cfg.kanbanHidden ?? []);
 	const visible = columns.filter((c) => !hidden.has(c.key));
+	// Columns that auto-complete cards landing in them (Kanban source only).
+	const doneColumns = new Set(cfg.kanbanDoneColumns ?? []);
 
 	// Reorder columns by dragging their headers; persists the full key order.
 	const reorder = (fromKey: string, toKey: string) => {
@@ -2444,6 +2455,21 @@ function renderTaskKanban(
 		refresh();
 	};
 
+	// Toggle a column as a "done column". Turning it on also completes the cards
+	// already sitting in it (one batched write); future drops/adds complete
+	// automatically via moveTo/addKanbanCard.
+	const toggleDoneColumn = (col: Column) => {
+		const set = new Set(cfg.kanbanDoneColumns ?? []);
+		const turningOn = !set.has(col.key);
+		if (turningOn) set.add(col.key);
+		else set.delete(col.key);
+		cfg.kanbanDoneColumns = set.size ? [...set] : undefined;
+		persist();
+		const undone = col.hits.filter((h) => !h.done);
+		if (turningOn && undone.length) void markCardsDone(view, undone).then(refresh);
+		else refresh();
+	};
+
 	const board = container.createDiv("hearth-kanban");
 	const today: string = moment().format("YYYY-MM-DD");
 
@@ -2451,10 +2477,12 @@ function renderTaskKanban(
 	const moveTo = (hit: TaskHit, col: Column) => {
 		if (source === "kanban") {
 			// Relocate the card's checkbox line under the target heading in the
-			// board note. Done state (the checkbox itself) is left untouched — in
-			// the Kanban plugin a column and a card's completion are independent.
+			// board note. A card's done state normally stays as-is (column and
+			// completion are independent), but a column marked as a "done column"
+			// completes the card as it lands.
 			if ((hit.boardColumn ?? "") === col.label) return;
-			void moveKanbanCard(view, hit, col.label).then((ok) => {
+			const markDone = doneColumns.has(col.key) || undefined;
+			void moveKanbanCard(view, hit, col.label, markDone).then((ok) => {
 				if (!ok) new Notice(t().notices.taskChangedOnDisk);
 				refresh();
 			});
@@ -2481,9 +2509,28 @@ function renderTaskKanban(
 
 	for (const col of visible) {
 		const colEl = board.createDiv("hearth-kanban-col");
+		colEl.toggleClass("is-done-col", doneColumns.has(col.key));
 		const head = colEl.createDiv("hearth-kanban-col-head");
 		head.createSpan({ cls: "hearth-kanban-col-title", text: col.label });
 		head.createSpan({ cls: "hearth-kanban-col-count", text: String(col.hits.length) });
+		// Kanban source: toggle whether this column auto-completes its cards.
+		if (source === "kanban") {
+			const isDoneCol = doneColumns.has(col.key);
+			const doneBtn = head.createEl("button", {
+				cls: "hearth-kanban-col-done",
+				attr: {
+					"aria-label": isDoneCol
+						? t().cards.tasks.unsetDoneColumn(col.label)
+						: t().cards.tasks.setDoneColumn(col.label),
+				},
+			});
+			doneBtn.toggleClass("is-active", isDoneCol);
+			setIcon(doneBtn, "circle-check-big");
+			doneBtn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				toggleDoneColumn(col);
+			});
+		}
 		const hideBtn = head.createEl("button", {
 			cls: "hearth-kanban-col-hide",
 			attr: { "aria-label": t().cards.tasks.hideColumn(col.label) },
@@ -2600,8 +2647,11 @@ function renderTaskKanban(
 			});
 		}
 		textRow.createDiv({ cls: "hearth-kanban-card-text", text: hit.text || hit.file.basename });
+			// Kanban priority shows as a single coloured dot inline with the title;
+			// TaskNotes keeps its labelled chip in the meta row below.
+			if (source === "kanban" && hit.priority) renderPriority(textRow, hit.priority, true);
 			const meta = cardEl.createDiv("hearth-kanban-card-meta");
-			if (hit.priority) renderPriority(meta, hit.priority);
+			if (source !== "kanban" && hit.priority) renderPriority(meta, hit.priority);
 			const dueLabel = formatDueLabel(hit);
 			if (dueLabel) {
 				const due = meta.createDiv({ cls: "hearth-task-due", text: dueLabel });
@@ -2615,23 +2665,34 @@ function renderTaskKanban(
 			const open = () => void openTask(view, hit);
 			cardEl.addEventListener("click", open);
 			makeClickable(cardEl, open, hit.text || hit.file.basename);
+			// Kanban source: right-click to convert the card into its own note
+			// (like the Kanban plugin), replacing the card text with a link.
+			if (source === "kanban" && hit.line >= 0) attachKanbanCardMenu(view, hit, cardEl, refresh);
 		}
 
 		// Kanban source: a per-column "add card" affordance that appends a new
 		// `- [ ]` item under this column's heading in the board note.
-		if (source === "kanban") renderKanbanAddCard(view, cfg, col.label, colBody, refresh);
+		if (source === "kanban") {
+			renderKanbanAddCard(view, cfg, col.label, colBody, refresh, {
+				extended: cfg.kanbanExtended ?? false,
+				markDone: doneColumns.has(col.key),
+			});
+		}
 	}
 }
 
 /** Render a compact "+ Add card" control at the bottom of a Kanban column. On
- * click it swaps to a text input; Enter (or blur with text) appends a new
- * unchecked card under the column's heading, Escape/empty blur cancels. */
+ * click it swaps to a small form: a text input plus, in extended mode, a due
+ * date and priority picker whose values are written onto the card as
+ * Tasks-plugin metadata (📅 / ⏫🔼🔽). Enter or clicking away commits, Escape
+ * cancels. When the column is a "done column" the new card is added completed. */
 function renderKanbanAddCard(
 	view: HomeView,
 	cfg: TasksConfig,
 	heading: string,
 	colBody: HTMLElement,
 	refresh: () => void,
+	opts: { extended: boolean; markDone: boolean },
 ): void {
 	const addBtn = colBody.createDiv({ cls: "hearth-kanban-add" });
 	setIcon(addBtn.createSpan("hearth-kanban-add-icon"), "plus");
@@ -2639,15 +2700,38 @@ function renderKanbanAddCard(
 	addBtn.addEventListener("click", (e) => {
 		e.stopPropagation();
 		addBtn.hide();
-		const input = colBody.createEl("textarea", {
+		const form = colBody.createDiv({ cls: "hearth-kanban-add-form" });
+		const input = form.createEl("textarea", {
 			cls: "hearth-kanban-add-input",
 			attr: { rows: "1", placeholder: t().cards.tasks.addCardPlaceholder },
 		});
+
+		// Extended mode: optional due date + priority, written as Tasks metadata.
+		let dueInput: HTMLInputElement | null = null;
+		let prioSelect: HTMLSelectElement | null = null;
+		if (opts.extended) {
+			const metaRow = form.createDiv({ cls: "hearth-kanban-add-meta" });
+			dueInput = metaRow.createEl("input", {
+				cls: "hearth-kanban-add-due",
+				attr: { type: "date", "aria-label": t().cards.tasks.dueDate },
+			});
+			prioSelect = metaRow.createEl("select", {
+				cls: "hearth-kanban-add-prio",
+				attr: { "aria-label": t().cards.tasks.priority },
+			});
+			const opt = (value: string, label: string) =>
+				prioSelect!.createEl("option", { value, text: label });
+			opt("", t().cards.tasks.priorityNone);
+			opt("high", t().cards.tasks.priorityHigh);
+			opt("medium", t().cards.tasks.priorityMedium);
+			opt("low", t().cards.tasks.priorityLow);
+		}
+
 		input.focus();
 		let committed = false;
 		const cancel = () => {
 			if (committed) return;
-			input.remove();
+			form.remove();
 			addBtn.show();
 		};
 		const commit = () => {
@@ -2655,7 +2739,8 @@ function renderKanbanAddCard(
 			const text = input.value.trim();
 			if (!text) return cancel();
 			committed = true;
-			void addKanbanCard(view, cfg, heading, text).then((ok) => {
+			const full = text + buildMetadataSuffix(dueInput?.value ?? "", prioSelect?.value ?? "");
+			void addKanbanCard(view, cfg, heading, full, opts.markDone).then((ok) => {
 				if (!ok) new Notice(t().notices.couldNotAddKanbanCard);
 				refresh();
 			});
@@ -2669,9 +2754,29 @@ function renderKanbanAddCard(
 				cancel();
 			}
 		});
-		input.addEventListener("blur", commit);
-		input.addEventListener("click", (ce) => ce.stopPropagation());
+		// Commit when focus truly leaves the form; cancel if nothing was typed.
+		// Deferred so moving between the text/date/priority fields (and the
+		// native date picker returning focus) doesn't commit early.
+		form.addEventListener("focusout", () => {
+			window.setTimeout(() => {
+				if (committed || form.contains(form.ownerDocument.activeElement)) return;
+				if (input.value.trim()) commit();
+				else cancel();
+			}, 0);
+		});
+		form.addEventListener("click", (ce) => ce.stopPropagation());
 	});
+}
+
+/** Build the Tasks-plugin metadata tail for a new card from the add form's
+ * due date and priority selection (e.g. " 📅 2024-01-15 ⏫"). Empty when both
+ * are blank. */
+function buildMetadataSuffix(due: string, priority: string): string {
+	let s = "";
+	if (/^\d{4}-\d{2}-\d{2}$/.test(due)) s += ` 📅 ${due}`;
+	const emoji = priority === "high" ? "⏫" : priority === "medium" ? "🔼" : priority === "low" ? "🔽" : "";
+	if (emoji) s += ` ${emoji}`;
+	return s;
 }
 
 /** Scan plain Markdown `- [ ]`/`- [x]` checkboxes in every in-scope note. A
@@ -2910,10 +3015,16 @@ function stripTaskMetadata(text: string): string {
 }
 
 /** Move a Kanban card's checkbox line (plus any nested continuation lines) out
- * of its current column and under `targetHeading` in the board note. Leaves the
- * card's done state untouched — column and completion are independent. Bails
- * (returning false) if the stored line no longer matches the card. */
-async function moveKanbanCard(view: HomeView, hit: TaskHit, targetHeading: string): Promise<boolean> {
+ * of its current column and under `targetHeading` in the board note. The card's
+ * done state normally stays as-is (column and completion are independent), but
+ * when `markDone` is set — the target is a "done column" — the card is checked
+ * as it lands. Bails (returning false) if the stored line no longer matches. */
+async function moveKanbanCard(
+	view: HomeView,
+	hit: TaskHit,
+	targetHeading: string,
+	markDone?: boolean,
+): Promise<boolean> {
 	const content = await view.app.vault.read(hit.file);
 	const lines = content.split("\n");
 	const cur = lines[hit.line];
@@ -2932,6 +3043,9 @@ async function moveKanbanCard(view: HomeView, hit: TaskHit, targetHeading: strin
 		end++;
 	}
 	const block = lines.slice(hit.line, end);
+	if (markDone) {
+		block[0] = block[0].replace(CHECKBOX_MARKER, (_x, pre: string, _s: string, post: string) => `${pre}x${post}`);
+	}
 	// Also drop one trailing blank line so blanks don't accumulate on each move.
 	let removeEnd = end;
 	if (lines[removeEnd]?.trim() === "") removeEnd++;
@@ -2942,21 +3056,106 @@ async function moveKanbanCard(view: HomeView, hit: TaskHit, targetHeading: strin
 	return true;
 }
 
-/** Append a new unchecked card under `heading` in the configured board note. */
+/** Append a new card under `heading` in the configured board note, checked when
+ * `markDone` (the target is a "done column") and unchecked otherwise. */
 async function addKanbanCard(
 	view: HomeView,
 	cfg: TasksConfig,
 	heading: string,
 	text: string,
+	markDone?: boolean,
 ): Promise<boolean> {
 	const file = resolveKanbanFile(view, cfg);
 	if (!file) return false;
 	const content = await view.app.vault.read(file);
 	const lines = content.split("\n");
-	const card = `- [ ] ${text.replace(/\r?\n/g, " ").trim()}`;
+	const card = `- [${markDone ? "x" : " "}] ${text.replace(/\r?\n/g, " ").trim()}`;
 	if (!insertCardBlock(lines, heading, [card])) return false;
 	await view.app.vault.modify(file, lines.join("\n"));
 	return true;
+}
+
+/** Mark a batch of Kanban cards (all in the same board note) done in a single
+ * write. Skips any line that no longer matches its card. Used when a column is
+ * toggled into a "done column" so the cards already in it complete at once. */
+async function markCardsDone(view: HomeView, hits: TaskHit[]): Promise<void> {
+	if (!hits.length) return;
+	const file = hits[0].file;
+	const content = await view.app.vault.read(file);
+	const lines = content.split("\n");
+	let changed = false;
+	for (const hit of hits) {
+		const line = lines[hit.line];
+		const m = line != null ? CHECKBOX_MARKER.exec(line) : null;
+		if (!m) continue;
+		if (stripTaskMetadata(line.slice(m[0].length)) !== stripTaskMetadata(hit.text)) continue;
+		lines[hit.line] = line.replace(CHECKBOX_MARKER, (_x, pre: string, _s: string, post: string) => `${pre}x${post}`);
+		changed = true;
+	}
+	if (changed) await view.app.vault.modify(file, lines.join("\n"));
+}
+
+/** Attach a right-click menu to a Kanban card element offering "Convert to
+ * note" (mirrors the Kanban plugin). */
+function attachKanbanCardMenu(
+	view: HomeView,
+	hit: TaskHit,
+	el: HTMLElement,
+	refresh: () => void,
+): void {
+	el.addEventListener("contextmenu", (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+		const menu = new Menu();
+		menu.addItem((item) =>
+			item
+				.setTitle(t().cards.tasks.convertToNote)
+				.setIcon("file-output")
+				.onClick(() => void convertKanbanCardToNote(view, hit).then(refresh)),
+		);
+		menu.showAtMouseEvent(e);
+	});
+}
+
+/** Convert a Kanban card into its own note (like the Kanban plugin): create a
+ * note in the user's default new-note location named after the card, then
+ * replace the card's text with a link to it — preserving the checkbox state and
+ * any Tasks-plugin metadata tail. */
+async function convertKanbanCardToNote(view: HomeView, hit: TaskHit): Promise<void> {
+	const board = hit.file;
+	const content = await view.app.vault.read(board);
+	const lines = content.split("\n");
+	const cur = lines[hit.line];
+	const m = cur != null ? KANBAN_CARD_RE.exec(cur) : null;
+	if (!m || stripTaskMetadata(m[2]) !== stripTaskMetadata(hit.text)) {
+		new Notice(t().notices.taskChangedOnDisk);
+		return;
+	}
+	// Sanitise the card title for use as a filename.
+	const title = (stripTaskMetadata(m[2]) || "Untitled").replace(/[\\/:*?"<>|#^[\]]+/g, " ").replace(/\s+/g, " ").trim() || "Untitled";
+	let note: TFile;
+	try {
+		const parent = view.app.fileManager.getNewFileParent(board.path);
+		const folder = parent instanceof TFolder ? parent : view.app.vault.getRoot();
+		note = await view.app.fileManager.createNewMarkdownFile(folder, title);
+	} catch {
+		new Notice(t().notices.couldNotConvertCard);
+		return;
+	}
+	const link = view.app.fileManager.generateMarkdownLink(note, board.path);
+	const meta = extractMetadataTail(m[2]);
+	// Everything before the card's text (indent + `- [x] `) is preserved.
+	const prefix = cur.slice(0, cur.length - m[2].length);
+	lines[hit.line] = `${prefix}${link}${meta ? ` ${meta}` : ""}`;
+	await view.app.vault.modify(board, lines.join("\n"));
+}
+
+/** The substring of a card's text from its first Tasks-plugin metadata emoji to
+ * the end (trimmed), or "" when the card carries no metadata. Used to keep
+ * due/priority markers on the card when its text is replaced with a link. */
+function extractMetadataTail(text: string): string {
+	const idx = text.search(new RegExp(`[${TASK_EMOJI_CLASS}]`, "u"));
+	return idx >= 0 ? text.slice(idx).trim() : "";
 }
 
 /** Insert a card block after the last existing card in the named column (or

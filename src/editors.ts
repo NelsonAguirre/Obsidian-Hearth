@@ -703,14 +703,17 @@ export class CardSettingsModal extends Modal {
 				});
 			});
 
-		if (cfg.layout === "kanban" && (cfg.kanbanHidden?.length || cfg.kanbanOrder?.length)) {
+		if (
+			cfg.layout === "kanban" &&
+			(cfg.kanbanHidden?.length || cfg.kanbanOrder?.length || cfg.kanbanDoneColumns?.length)
+		) {
+			const parts: string[] = [];
+			if (cfg.kanbanHidden?.length) parts.push(t().editors.tasks.kanbanHidden(cfg.kanbanHidden.join(", ")));
+			if (cfg.kanbanDoneColumns?.length)
+				parts.push(t().editors.tasks.kanbanDoneColumns(cfg.kanbanDoneColumns.join(", ")));
 			const reset = new Setting(containerEl)
 				.setName(t().editors.tasks.kanbanColumns)
-				.setDesc(
-					cfg.kanbanHidden?.length
-						? t().editors.tasks.kanbanHidden(cfg.kanbanHidden.join(", "))
-						: t().editors.tasks.kanbanCustomOrder,
-				);
+				.setDesc(parts.length ? parts.join(" ") : t().editors.tasks.kanbanCustomOrder);
 			if (cfg.kanbanHidden?.length) {
 				reset.addButton((b) =>
 					b.setButtonText(t().editors.tasks.showAll).onClick(() => {
@@ -727,6 +730,7 @@ export class CardSettingsModal extends Modal {
 					.onClick(() => {
 						cfg.kanbanHidden = undefined;
 						cfg.kanbanOrder = undefined;
+						cfg.kanbanDoneColumns = undefined;
 						this.opts.save();
 						this.render();
 					}),
