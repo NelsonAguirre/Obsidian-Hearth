@@ -2470,22 +2470,6 @@
 	line-height: 1;
 }
 
-/* Kanban board header: sort control on the left, add control on the right. */
-.hearth-kanban-head {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 8px;
-	padding: 2px 2px 6px;
-	margin-bottom: 6px;
-	border-bottom: 1px solid var(--background-modifier-border);
-}
-
-/* In the Kanban header the add button sits inline, so keep it always visible. */
-.hearth-kanban-head .hearth-task-add {
-	opacity: 1;
-}
-
 /* ---- Activity heatmap card ------------------------------------------ */
 .hearth-heatmap {
 	display: flex;
@@ -2664,7 +2648,8 @@
 }
 
 .hearth-kanban-col-hide,
-.hearth-kanban-col-done {
+.hearth-kanban-col-done,
+.hearth-kanban-col-sort {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -2678,8 +2663,21 @@
 }
 
 .hearth-kanban-col-head:hover .hearth-kanban-col-hide,
-.hearth-kanban-col-head:hover .hearth-kanban-col-done {
+.hearth-kanban-col-head:hover .hearth-kanban-col-done,
+.hearth-kanban-col-head:hover .hearth-kanban-col-sort {
 	opacity: 0.8;
+}
+
+/* A column with a non-default sort keeps its control faintly visible so the
+   custom order is discoverable without hovering. */
+.hearth-kanban-col-sort.is-active {
+	opacity: 0.8;
+	color: var(--interactive-accent);
+}
+
+.hearth-kanban-col-sort .svg-icon {
+	width: 13px;
+	height: 13px;
 }
 
 /* The done-column toggle stays hover-only even when active (the header tint

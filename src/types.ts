@@ -82,6 +82,10 @@ export interface TasksConfig {
 	sortKey?: "smart" | "due" | "priority" | "created" | "alpha";
 	/** Reverse the chosen sort direction. */
 	sortReverse?: boolean;
+	/** Kanban: per-column sort, keyed by column key. Each column sorts
+	 * independently from its own header; a column with no entry falls back to the
+	 * card's global `sortKey`/`sortReverse`. */
+	kanbanColumnSort?: Record<string, { key?: "smart" | "due" | "priority" | "created" | "alpha"; reverse?: boolean }>;
 	/** How `folders` is applied. "all" (default) scans the whole vault. */
 	folderScope?: "all" | "whitelist" | "blacklist";
 	folders?: string[];
@@ -559,7 +563,7 @@ export function cloneCard(card: DashboardCard): DashboardCard {
 	};
 	if (card.links) copy.links = card.links.map((l) => ({ ...l }));
 	if (card.commands) copy.commands = card.commands.map((c) => ({ ...c }));
-	if (card.tasks) copy.tasks = { ...card.tasks, folders: card.tasks.folders ? [...card.tasks.folders] : undefined, kanbanOrder: card.tasks.kanbanOrder ? [...card.tasks.kanbanOrder] : undefined, kanbanHidden: card.tasks.kanbanHidden ? [...card.tasks.kanbanHidden] : undefined, kanbanDoneColumns: card.tasks.kanbanDoneColumns ? [...card.tasks.kanbanDoneColumns] : undefined };
+	if (card.tasks) copy.tasks = { ...card.tasks, folders: card.tasks.folders ? [...card.tasks.folders] : undefined, kanbanOrder: card.tasks.kanbanOrder ? [...card.tasks.kanbanOrder] : undefined, kanbanHidden: card.tasks.kanbanHidden ? [...card.tasks.kanbanHidden] : undefined, kanbanDoneColumns: card.tasks.kanbanDoneColumns ? [...card.tasks.kanbanDoneColumns] : undefined, kanbanColumnSort: card.tasks.kanbanColumnSort ? Object.fromEntries(Object.entries(card.tasks.kanbanColumnSort).map(([k, v]) => [k, { ...v }])) : undefined };
 	if (card.calendar) copy.calendar = { ...card.calendar };
 	if (card.savedSearch) copy.savedSearch = { ...card.savedSearch };
 	if (card.heatmap) copy.heatmap = { ...card.heatmap };

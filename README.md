@@ -102,12 +102,12 @@ toolbar; configure each one from the card itself (title, content, colors, size).
   frontmatter, or reads a [Kanban](https://github.com/obsidian-community/obsidian-kanban)
   plugin board note. Folder whitelist/blacklist for scope. Click **+** (top-right,
   TaskNotes source) to create a new task via TaskNotes' own command. Tasks are
-  sorted by **due → scheduled → priority → created**, and every list and board
-  carries a minimalistic, always-visible **sort control** — pick **Smart**
-  (that default chain), **Due date**, **Priority**, **Date created** or
-  **Alphabetical**, and optionally **reverse** it. The choice is remembered per
-  card, and incomplete tasks always sort ahead of completed ones. Due dates
-  show as short
+  sorted by **due → scheduled → priority → created**, with a minimalistic
+  **sort control** — pick **Smart** (that default chain), **Due date**,
+  **Priority**, **Date created** or **Alphabetical**, and optionally **reverse**
+  it. A list has one control in its header; a Kanban board puts one **on each
+  column** so every column sorts independently. The choice is remembered, and
+  incomplete tasks always sort ahead of completed ones. Due dates show as short
   relative labels (**Today**, **Tomorrow**, **Yesterday**, the weekday for the
   rest of the week, **Next Friday** / **Last Friday** for the week after, then
   a compact "15 Jul"). They also accept **natural-language input**: write
@@ -329,6 +329,11 @@ load. Adding a language is a matter of copying `en.ts`, translating the values
 [`src/locales/README.md`](src/locales/README.md) for the walkthrough.
 
 ## Shipped:
+
+> **v1.6.8.10-beta** — the Kanban board's sort control now lives **on each
+> column** (an icon in the column header) instead of a shared board header, so
+> every column sorts independently — a column with no choice of its own follows
+> the card's default sort. The list layout keeps its single header control.
 
 > **v1.6.8.9-beta** — Tasks-card parity and polish: the Markdown-checkbox source
 > gains its own **Dates & priorities** toggle (on by default) mirroring the

@@ -2181,8 +2181,13 @@ function renderTasksListHeader(
 	const head = container.createDiv("hearth-tasks-head hearth-tasks-listhead");
 	head.createSpan({ cls: "hearth-tasks-listhead-count", text: t().cards.tasks.taskCount(count) });
 	const actions = head.createDiv("hearth-tasks-listhead-actions");
-	// Persistent sort control, offered in every source/layout.
-	renderTaskSortControl(view, cfg, actions, refresh);
+	// Persistent sort control for the whole list.
+	renderTaskSortControl(actions, { key: cfg.sortKey, reverse: cfg.sortReverse }, false, (next) => {
+		cfg.sortKey = next.key;
+		cfg.sortReverse = next.reverse;
+		void view.plugin.saveData(view.plugin.settings);
+		refresh();
+	});
 	if (source === "tasknotes") {
 		// TaskNotes add is a single command button, so it sits in the header.
 		taskNotesAddButton(view, actions);
@@ -2358,13 +2363,19 @@ function compareSmart(a: TaskHit, b: TaskHit): number {
 	return a.created - b.created;
 }
 
-/** Sort tasks according to the card's persistent sort setting. Incomplete tasks
- * always come before completed ones (so "show completed" adds them below rather
- * than crowding out open work); within each group the chosen key applies, and
- * `sortReverse` flips that key (not the incomplete/complete grouping). */
-function sortTasks(hits: TaskHit[], cfg: TasksConfig): void {
-	const key = cfg.sortKey ?? "smart";
-	const reverse = !!cfg.sortReverse;
+/** A chosen sort key + direction. An absent `key` means "smart" (the default
+ * chain); an absent `reverse` means ascending. */
+type SortKey = NonNullable<TasksConfig["sortKey"]>;
+interface SortState {
+	key?: SortKey;
+	reverse?: boolean;
+}
+
+/** Sort a list of tasks in place by the given key and direction. Incomplete
+ * tasks always come before completed ones (so "show completed" adds them below
+ * rather than crowding out open work); within each group the chosen key
+ * applies, and `reverse` flips that key (not the incomplete/complete grouping). */
+function sortHits(hits: TaskHit[], key: SortKey, reverse: boolean): void {
 	const compare = (a: TaskHit, b: TaskHit): number => {
 		switch (key) {
 			case "due": {
@@ -2394,23 +2405,34 @@ function sortTasks(hits: TaskHit[], cfg: TasksConfig): void {
 	});
 }
 
-/** Available sort keys, in the order shown in the sort menu. */
-const TASK_SORT_KEYS: NonNullable<TasksConfig["sortKey"]>[] = ["smart", "due", "priority", "created", "alpha"];
+/** Sort tasks by the card's persistent (whole-list) sort setting. */
+function sortTasks(hits: TaskHit[], cfg: TasksConfig): void {
+	sortHits(hits, cfg.sortKey ?? "smart", !!cfg.sortReverse);
+}
 
-/** A minimalistic, always-visible sort control: a small button showing the
- * active sort that opens a menu to pick a key or reverse the direction. The
- * choice is saved to the card config so it persists across reloads, and it is
- * offered in every layout and source (list header and Kanban board header). */
-function renderTaskSortControl(view: HomeView, cfg: TasksConfig, parent: HTMLElement, refresh: () => void): void {
-	const active = cfg.sortKey ?? "smart";
+/** Available sort keys, in the order shown in the sort menu. */
+const TASK_SORT_KEYS: SortKey[] = ["smart", "due", "priority", "created", "alpha"];
+
+/** A minimalistic sort control: a small button that opens a menu to pick a sort
+ * key or reverse the direction. `compact` renders it icon-only (for Kanban
+ * column headers, where each column sorts independently); otherwise it shows a
+ * label too (the list header). `onChange` persists and refreshes. */
+function renderTaskSortControl(
+	parent: HTMLElement,
+	current: SortState,
+	compact: boolean,
+	onChange: (next: SortState) => void,
+): void {
+	const active = current.key ?? "smart";
 	const labels = t().cards.tasks.sortLabels;
 	const btn = parent.createEl("button", {
-		cls: "hearth-tasks-sort",
+		cls: compact ? "hearth-kanban-col-sort" : "hearth-tasks-sort",
 		attr: { "aria-label": t().cards.tasks.sort, title: t().cards.tasks.sort },
 	});
 	setIcon(btn, "arrow-up-down");
-	btn.createSpan({ cls: "hearth-tasks-sort-label", text: labels[active] });
-	if (cfg.sortReverse) btn.addClass("is-reversed");
+	if (!compact) btn.createSpan({ cls: "hearth-tasks-sort-label", text: labels[active] });
+	if (current.reverse) btn.addClass("is-reversed");
+	if (active !== "smart" || current.reverse) btn.addClass("is-active");
 	btn.addEventListener("click", (e) => {
 		e.stopPropagation();
 		const menu = new Menu();
@@ -2419,24 +2441,16 @@ function renderTaskSortControl(view: HomeView, cfg: TasksConfig, parent: HTMLEle
 				item
 					.setTitle(labels[key])
 					.setChecked(active === key)
-					.onClick(() => {
-						cfg.sortKey = key === "smart" ? undefined : key;
-						void view.plugin.saveData(view.plugin.settings);
-						refresh();
-					}),
+					.onClick(() => onChange({ key: key === "smart" ? undefined : key, reverse: current.reverse })),
 			);
 		}
 		menu.addSeparator();
 		menu.addItem((item) =>
 			item
 				.setTitle(t().cards.tasks.sortReverse)
-				.setChecked(!!cfg.sortReverse)
+				.setChecked(!!current.reverse)
 				.setIcon("arrow-down-up")
-				.onClick(() => {
-					cfg.sortReverse = cfg.sortReverse ? undefined : true;
-					void view.plugin.saveData(view.plugin.settings);
-					refresh();
-				}),
+				.onClick(() => onChange({ key: current.key, reverse: current.reverse ? undefined : true })),
 		);
 		menu.showAtMouseEvent(e);
 	});
@@ -2474,11 +2488,9 @@ async function loadAndRenderTasks(
 	sortTasks(hits, cfg);
 
 	if (cfg.layout === "kanban") {
-		// A minimalistic board header carrying the persistent sort control (and,
-		// for TaskNotes, its quick-add command), above the columns.
-		const head = container.createDiv("hearth-kanban-head");
-		renderTaskSortControl(view, cfg, head, refresh);
-		if (source === "tasknotes") taskNotesAddButton(view, head);
+		// TaskNotes' quick-add sits top-right over the board; sorting is per
+		// column, handled inside renderTaskKanban.
+		if (source === "tasknotes") taskNotesAddButton(view, container.createDiv("hearth-tasks-head"));
 		renderTaskKanban(view, cfg, hits, container, refresh, boardColumns);
 		return;
 	}
@@ -2708,7 +2720,15 @@ function renderTaskKanban(
 		}
 	};
 
+	// Each column sorts independently from its own header, falling back to the
+	// card's global sort when it has no override of its own.
+	const globalKey: SortKey = cfg.sortKey ?? "smart";
+	const globalReverse = !!cfg.sortReverse;
+
 	for (const col of visible) {
+		const colSort = cfg.kanbanColumnSort?.[col.key] ?? {};
+		sortHits(col.hits, colSort.key ?? globalKey, colSort.reverse ?? globalReverse);
+
 		const colEl = board.createDiv("hearth-kanban-col");
 		colEl.toggleClass("is-done-col", doneColumns.has(col.key));
 		const head = colEl.createDiv("hearth-kanban-col-head");
@@ -2723,6 +2743,16 @@ function renderTaskKanban(
 			});
 		}
 		head.createSpan({ cls: "hearth-kanban-col-count", text: String(col.hits.length) });
+		// Per-column sort control (icon-only). Writes into kanbanColumnSort under
+		// this column's key; clearing back to Smart/forward removes the override.
+		renderTaskSortControl(head, colSort, true, (next) => {
+			const map = { ...(cfg.kanbanColumnSort ?? {}) };
+			if (!next.key && !next.reverse) delete map[col.key];
+			else map[col.key] = next;
+			cfg.kanbanColumnSort = Object.keys(map).length ? map : undefined;
+			persist();
+			refresh();
+		});
 		// Kanban source: toggle whether this column auto-completes its cards.
 		if (source === "kanban") {
 			const isDoneCol = doneColumns.has(col.key);
