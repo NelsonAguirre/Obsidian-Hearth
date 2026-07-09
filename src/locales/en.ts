@@ -323,6 +323,7 @@ export const en = {
 			stats: "Vault statistics",
 			search: "Query",
 			heatmap: "Activity heatmap",
+			calculator: "Calculator",
 		},
 		linkTypes: {
 			note: "Note",
@@ -485,6 +486,15 @@ export const en = {
 			customFormatDesc: "A moment.js format, e.g. ddd D MMM or YYYY/MM/DD.",
 			customFormatPlaceholder: "ddd D MMM",
 		},
+		calculator: {
+			angleUnit: "Angle unit",
+			angleUnitDesc: "Unit assumed by trig functions like sin and cos.",
+			degrees: "Degrees",
+			radians: "Radians",
+			history: "History",
+			historyDesc: "Previously evaluated queries kept on this card.",
+			clearHistory: "Clear history",
+		},
 		colors: {
 			heading: "Colors",
 			headingDesc: "Accent and background tint for this card.",
@@ -541,6 +551,10 @@ export const en = {
 		},
 		text: {
 			placeholder: "Jot something down…",
+		},
+		calculator: {
+			placeholder: "2 + 2, 10 km to miles, 20% of 150…",
+			reuse: "Click to reuse",
 		},
 		daily: {
 			createToday: "Create today's note",
@@ -674,6 +688,7 @@ export const en = {
 		search: "Query",
 		heatmap: "Activity heatmap",
 		text: "Text / jot-down",
+		calculator: "Calculator",
 	},
 
 	// ---- File-type filter labels ---------------------------------------

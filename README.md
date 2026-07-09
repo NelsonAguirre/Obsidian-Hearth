@@ -138,6 +138,12 @@ toolbar; configure each one from the card itself (title, content, colors, size).
   **playful** (cheeky, randomised) mode.
 - **Text / jot-down** — a quick scratch field saved with the card, rendered as
   Markdown (double-click to edit).
+- **Calculator** — a Wolfram-Alpha-style input box that evaluates as you type:
+  arithmetic and math functions (`sqrt`, `sin`, `log`, `5!`, `2^10`…), **unit
+  conversions** across length, mass, temperature, time, volume, area, speed and
+  data (`10 km to miles`, `100 f in c`, `1 gb to mb`), and **plain-language**
+  queries (`20% of 150`, `5 squared`, `3 x 4`). Press **Enter** to keep a
+  result in the card's history; everything is computed locally (no network).
 
 ### Live content
 
