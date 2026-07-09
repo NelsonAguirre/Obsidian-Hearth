@@ -1,13 +1,16 @@
 import {
+	App,
 	Component,
 	debounce,
 	getAllTags,
 	MarkdownRenderer,
 	MarkdownView,
 	Menu,
+	Modal,
 	moment as createMoment,
 	Notice,
 	setIcon,
+	Setting,
 	TFile,
 	TFolder,
 } from "obsidian";
@@ -18,7 +21,6 @@ import { evaluate as evaluateCalc } from "./calculator";
 import { cachedRates, loadRates } from "./currency";
 import { EXCALIDRAW_PLUGIN_ID, iconForFile, isExcalidraw } from "./filetypes";
 import { QueryHit, runQuery, searchFileContents } from "./query";
-import { TaskMetadataModal } from "./pickers";
 import { makeClickable } from "./ui";
 import { parseNaturalDate, formatRelativeDate } from "./dates";
 import { t } from "./i18n";
@@ -2144,10 +2146,10 @@ function taskNotesCreateCommandId(view: HomeView): string {
 	return match?.id ?? "tasknotes:create-new-task";
 }
 
-/** A small "+" button (top-right) that triggers TaskNotes' create-task command. */
-function renderTaskNotesAddButton(view: HomeView, container: HTMLElement): void {
-	const head = container.createDiv("hearth-tasks-head");
-	const btn = head.createEl("button", {
+/** A small "+" button that triggers TaskNotes' create-task command, appended to
+ * `parent`. */
+function taskNotesAddButton(view: HomeView, parent: HTMLElement): void {
+	const btn = parent.createEl("button", {
 		cls: "hearth-task-add",
 		attr: { "aria-label": t().cards.tasks.createNewTask, title: t().cards.tasks.createNewTask },
 	});
@@ -2159,6 +2161,42 @@ function renderTaskNotesAddButton(view: HomeView, container: HTMLElement): void 
 			new Notice(t().notices.taskNotesCreateFailed);
 		}
 	});
+}
+
+/** A "+" header (top-right) for TaskNotes' create-task command, used above the
+ * Kanban-layout board. */
+function renderTaskNotesAddButton(view: HomeView, container: HTMLElement): void {
+	taskNotesAddButton(view, container.createDiv("hearth-tasks-head"));
+}
+
+/** A minimalistic header for the list layout: the task count on the left and a
+ * source-appropriate add control on the right (TaskNotes' create command, or a
+ * Kanban quick-add into the first column). */
+function renderTasksListHeader(
+	view: HomeView,
+	cfg: TasksConfig,
+	source: string,
+	count: number,
+	boardColumns: string[] | undefined,
+	container: HTMLElement,
+	refresh: () => void,
+): void {
+	const head = container.createDiv("hearth-tasks-head hearth-tasks-listhead");
+	head.createSpan({ cls: "hearth-tasks-listhead-count", text: t().cards.tasks.taskCount(count) });
+	const actions = head.createDiv("hearth-tasks-listhead-actions");
+	if (source === "tasknotes") {
+		// TaskNotes add is a single command button, so it sits in the header.
+		taskNotesAddButton(view, actions);
+	} else if (source === "kanban" && boardColumns && boardColumns.length) {
+		// Kanban add expands into a form, so give it a full-width row below the
+		// header; new cards go into the board's first column.
+		const target = boardColumns[0];
+		const addHost = container.createDiv("hearth-tasks-listadd");
+		renderKanbanAddCard(view, cfg, target, addHost, refresh, {
+			extended: cfg.kanbanExtended ?? false,
+			markDone: (cfg.kanbanDoneColumns ?? []).includes(target.toLowerCase()),
+		});
+	}
 }
 
 /** A short, human-readable label for a recurrence rule (e.g. "FREQ=WEEKLY;
@@ -2211,12 +2249,18 @@ function priorityLevel(priority: string): "high" | "medium" | "low" | "other" {
 }
 
 /** A readable label for a priority value: a raw word (e.g. TaskNotes' "high")
- * is shown as-is, but an emoji priority (⏫/🔼/🔽) is mapped to its level word so
- * the list doesn't show a bare emoji. */
+ * is shown as-is, but an emoji priority (🔺⏫🔼🔽⏬) is mapped to its key word
+ * (highest/high/medium/low/lowest) so the list doesn't show a bare emoji. */
 function priorityDisplayLabel(priority: string): string {
-	if (/[a-z0-9]/i.test(priority)) return priority;
-	const level = priorityLevel(priority);
-	return level === "other" ? priority : level; // CSS capitalizes the word
+	if (/[a-z]/i.test(priority)) return priority;
+	return priorityKey(priority) || priority; // CSS capitalizes the word
+}
+
+/** The fine-grained CSS level class for a priority: distinguishes all five
+ * Tasks-plugin levels (highest/high/medium/low/lowest) so, e.g., "highest" and
+ * "high" get different colours. Falls back to "other". */
+function priorityClass(priority: string): string {
+	return priorityKey(priority) || "other";
 }
 
 /** A small colored dot showing a task's priority. With `dotOnly` (used by
@@ -2224,7 +2268,7 @@ function priorityDisplayLabel(priority: string): string {
  * inline, with the value in the tooltip; otherwise it also shows a readable
  * label beside the dot. */
 function renderPriority(parent: HTMLElement, priority: string, dotOnly = false): void {
-	const chip = parent.createDiv(`hearth-task-priority is-${priorityLevel(priority)}`);
+	const chip = parent.createDiv(`hearth-task-priority is-${priorityClass(priority)}`);
 	if (dotOnly) chip.addClass("is-dot-only");
 	chip.createDiv("hearth-task-priority-dot");
 	if (!dotOnly) chip.createSpan({ cls: "hearth-task-priority-label", text: priorityDisplayLabel(priority) });
@@ -2313,8 +2357,9 @@ async function loadAndRenderTasks(
 			emptyState(container, "list-todo", t().cards.empty.tasksEnable);
 			return;
 		}
-		// A quick "+" to create a new task via TaskNotes' own command.
-		renderTaskNotesAddButton(view, container);
+		// A quick "+" to create a new task via TaskNotes' own command. In list
+		// layout the header carries it instead, so only add it above the board.
+		if (cfg.layout === "kanban") renderTaskNotesAddButton(view, container);
 		hits = collectTaskNotesTasks(view, cfg);
 	} else if (source === "kanban") {
 		const board = await collectKanbanTasks(view, cfg);
@@ -2339,6 +2384,10 @@ async function loadAndRenderTasks(
 	let list = cfg.showCompleted ? hits : hits.filter((h) => !h.done);
 	const limit = cfg.count && cfg.count > 0 ? cfg.count : 10;
 	list = list.slice(0, limit);
+
+	// A minimalistic header (count + add control) sits above the list, shown
+	// even when empty so the add control stays reachable.
+	renderTasksListHeader(view, cfg, source, list.length, boardColumns, container, refresh);
 
 	if (list.length === 0) {
 		emptyState(container, "list-todo", t().cards.empty.tasksEmpty);
@@ -2746,9 +2795,8 @@ function renderKanbanAddCard(
 			attr: { rows: "1", placeholder: t().cards.tasks.addCardPlaceholder },
 		});
 
-		// Extended mode: full Tasks metadata (priority, recurrence, start,
-		// scheduled, due), written onto the new card.
-		const readMeta = opts.extended ? renderMetaFieldsInline(form, emptyMeta()) : () => emptyMeta();
+		// Extended mode: dates & priority fields, written onto the new card.
+		const readMeta = opts.extended ? buildTaskDetailFields(form, emptyMeta()) : () => emptyMeta();
 
 		input.focus();
 		let committed = false;
@@ -2811,50 +2859,152 @@ function buildMetadataSuffix(meta: TaskMeta): string {
 	return s;
 }
 
-/** Build the inline metadata fields (priority, recurrence, start, scheduled,
- * due) into `parent`, prefilled from `meta`, and return a getter for the
- * current values. Used by the Kanban add-card form. */
-function renderMetaFieldsInline(parent: HTMLElement, meta: TaskMeta): () => TaskMeta {
-	const grid = parent.createDiv({ cls: "hearth-kanban-add-meta" });
+/** The repeat units offered by the deterministic recurrence picker, mapped to
+ * the singular word the Tasks plugin expects ("every day/week/month/year"). */
+const RECURRENCE_UNITS = ["day", "week", "month", "year"] as const;
 
-	const prio = grid.createEl("select", {
-		cls: "hearth-kanban-add-prio",
-		attr: { "aria-label": t().cards.tasks.priority },
-	});
-	prio.createEl("option", { value: "", text: t().cards.tasks.priorityNone });
-	prio.createEl("option", { value: "highest", text: t().cards.tasks.priorityHighest });
-	prio.createEl("option", { value: "high", text: t().cards.tasks.priorityHigh });
-	prio.createEl("option", { value: "medium", text: t().cards.tasks.priorityMedium });
-	prio.createEl("option", { value: "low", text: t().cards.tasks.priorityLow });
-	prio.createEl("option", { value: "lowest", text: t().cards.tasks.priorityLowest });
+/** Parse a Tasks-plugin recurrence string into the picker's {unit, interval}.
+ * Handles "every day", "every week", "every 2 weeks", etc. Unknown/empty rules
+ * yield unit "" (no recurrence). */
+function parseRecurrence(rule: string): { unit: string; interval: number } {
+	const m = /every\s+(\d+)?\s*(day|week|month|year)s?/i.exec(rule.trim());
+	if (!m) return { unit: "", interval: 1 };
+	return { unit: m[2].toLowerCase(), interval: Math.max(1, parseInt(m[1] ?? "1", 10) || 1) };
+}
+
+/** Build a Tasks-plugin recurrence string from the picker's {unit, interval}
+ * (e.g. "every week", "every 2 weeks"). Empty unit means no recurrence. */
+function buildRecurrence(unit: string, interval: number): string {
+	if (!unit) return "";
+	const n = Math.max(1, interval || 1);
+	return n > 1 ? `every ${n} ${unit}s` : `every ${unit}`;
+}
+
+/** Build the shared task-detail fields (priority, repeat, and start/scheduled/
+ * due dates) into `parent`, prefilled from `meta`, and return a getter for the
+ * current values. Repeat and the dates are mutually exclusive: setting one
+ * disables and clears the other. Used by both the Kanban add-card form and the
+ * edit dialog. */
+function buildTaskDetailFields(parent: HTMLElement, meta: TaskMeta): () => TaskMeta {
+	const grid = parent.createDiv({ cls: "hearth-taskdetail" });
+
+	const row = (labelText: string) => {
+		const r = grid.createDiv({ cls: "hearth-taskdetail-row" });
+		r.createSpan({ cls: "hearth-taskdetail-label", text: labelText });
+		return r;
+	};
+
+	const prioRow = row(t().cards.tasks.priority);
+	const prio = prioRow.createEl("select", { cls: "hearth-taskdetail-input", attr: { "aria-label": t().cards.tasks.priority } });
+	for (const [value, label] of [
+		["", t().cards.tasks.priorityNone],
+		["highest", t().cards.tasks.priorityHighest],
+		["high", t().cards.tasks.priorityHigh],
+		["medium", t().cards.tasks.priorityMedium],
+		["low", t().cards.tasks.priorityLow],
+		["lowest", t().cards.tasks.priorityLowest],
+	] as const)
+		prio.createEl("option", { value, text: label });
 	prio.value = meta.priority;
 
+	// Repeat: unit dropdown + interval number (deterministic, no free text).
+	const parsed = parseRecurrence(meta.recurrence);
+	const repeatRow = row(t().cards.tasks.recurrenceLabel);
+	const repeatUnit = repeatRow.createEl("select", { cls: "hearth-taskdetail-input", attr: { "aria-label": t().cards.tasks.recurrenceLabel } });
+	repeatUnit.createEl("option", { value: "", text: t().cards.tasks.recurrenceNever });
+	for (const u of RECURRENCE_UNITS)
+		repeatUnit.createEl("option", { value: u, text: t().cards.tasks.recurrenceUnits[u] });
+	repeatUnit.value = parsed.unit;
+	const repeatEvery = repeatRow.createSpan({ cls: "hearth-taskdetail-every", text: t().cards.tasks.recurrenceEvery });
+	const repeatInterval = repeatRow.createEl("input", {
+		cls: "hearth-taskdetail-interval",
+		attr: { type: "number", min: "1", "aria-label": t().cards.tasks.recurrenceInterval },
+	});
+	repeatInterval.value = String(parsed.interval);
+
 	const dateField = (emoji: string, label: string, value: string) => {
-		const wrap = grid.createDiv({ cls: "hearth-kanban-add-datefield" });
-		wrap.createSpan({ cls: "hearth-kanban-add-dateicon", text: emoji, attr: { title: label } });
-		const inp = wrap.createEl("input", {
-			cls: "hearth-kanban-add-due",
-			attr: { type: "date", "aria-label": label },
-		});
+		const r = grid.createDiv({ cls: "hearth-taskdetail-row" });
+		r.createSpan({ cls: "hearth-taskdetail-label", text: `${emoji} ${label}` });
+		const inp = r.createEl("input", { cls: "hearth-taskdetail-input", attr: { type: "date", "aria-label": label } });
 		inp.value = value;
 		return inp;
 	};
 	const start = dateField("🛫", t().cards.tasks.startDate, meta.start);
 	const scheduled = dateField("⏳", t().cards.tasks.scheduledDate, meta.scheduled);
 	const due = dateField("📅", t().cards.tasks.dueDate, meta.due);
+	const dates = [start, scheduled, due];
+	// A card that's already recurring wins over any stray dates (they're
+	// mutually exclusive), so don't show stale date values beside the repeat.
+	if (parsed.unit) dates.forEach((d) => (d.value = ""));
 
-	const recur = grid.createEl("input", {
-		cls: "hearth-kanban-add-recur",
-		attr: { type: "text", placeholder: t().cards.tasks.recurrencePlaceholder, "aria-label": t().cards.tasks.recurrenceLabel, value: meta.recurrence },
+	// Repeat and fixed dates are mutually exclusive: choosing a repeat clears
+	// and disables the dates, and setting any date clears and disables repeat.
+	const sync = () => {
+		const repeating = repeatUnit.value !== "";
+		const hasDate = dates.some((d) => d.value !== "");
+		dates.forEach((d) => (d.disabled = repeating));
+		repeatUnit.disabled = hasDate;
+		repeatInterval.disabled = hasDate || !repeating;
+		repeatEvery.toggleClass("is-disabled", hasDate || !repeating);
+	};
+	repeatUnit.addEventListener("change", () => {
+		if (repeatUnit.value !== "") dates.forEach((d) => (d.value = ""));
+		sync();
 	});
+	dates.forEach((d) =>
+		d.addEventListener("input", () => {
+			if (d.value !== "") {
+				repeatUnit.value = "";
+				repeatInterval.value = "1";
+			}
+			sync();
+		}),
+	);
+	sync();
 
-	return () => ({
-		priority: prio.value,
-		recurrence: recur.value.trim(),
-		start: start.value,
-		scheduled: scheduled.value,
-		due: due.value,
-	});
+	return () => {
+		const repeating = repeatUnit.value !== "";
+		return {
+			priority: prio.value,
+			recurrence: repeating ? buildRecurrence(repeatUnit.value, parseInt(repeatInterval.value, 10)) : "",
+			start: repeating ? "" : start.value,
+			scheduled: repeating ? "" : scheduled.value,
+			due: repeating ? "" : due.value,
+		};
+	};
+}
+
+/** A modal to edit a Kanban card's dates & priority via {@link
+ * buildTaskDetailFields}, prefilled from `meta`; submits the full TaskMeta. */
+class TaskMetadataModal extends Modal {
+	private read: (() => TaskMeta) | null = null;
+	constructor(
+		app: App,
+		private readonly initial: TaskMeta,
+		private readonly onSubmit: (meta: TaskMeta) => void,
+	) {
+		super(app);
+	}
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.addClass("hearth-taskdetail-modal");
+		contentEl.createEl("h3", { text: t().cards.tasks.editMetadata });
+		this.read = buildTaskDetailFields(contentEl, this.initial);
+		new Setting(contentEl)
+			.addButton((b) =>
+				b
+					.setButtonText(t().cards.tasks.save)
+					.setCta()
+					.onClick(() => {
+						if (this.read) this.onSubmit(this.read());
+						this.close();
+					}),
+			)
+			.addButton((b) => b.setButtonText(t().cards.tasks.cancel).onClick(() => this.close()));
+	}
+	onClose(): void {
+		this.contentEl.empty();
+	}
 }
 
 /** Scan plain Markdown `- [ ]`/`- [x]` checkboxes in every in-scope note. A

@@ -2272,33 +2272,31 @@
 	font-family: inherit;
 }
 
-/* Metadata pickers on the add-card form (extended mode): priority, dates and
-   recurrence, stacked to fit the narrow column. */
-.hearth-kanban-add-meta {
+/* Shared task-detail fields (priority, repeat, dates) — used by the Kanban
+   add-card form and the edit dialog. Rows stack; label left, control right. */
+.hearth-taskdetail {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: 5px;
 }
 
-.hearth-kanban-add-datefield {
+.hearth-taskdetail-row {
 	display: flex;
 	align-items: center;
-	gap: 4px;
+	gap: 6px;
+	flex-wrap: wrap;
 }
 
-.hearth-kanban-add-dateicon {
-	flex-shrink: 0;
-	font-size: 0.85rem;
-	width: 1.2em;
-	text-align: center;
+.hearth-taskdetail-label {
+	flex: 0 0 auto;
+	min-width: 4.5em;
+	font-size: 0.78rem;
+	color: var(--text-muted);
 }
 
-.hearth-kanban-add-due,
-.hearth-kanban-add-prio,
-.hearth-kanban-add-recur {
+.hearth-taskdetail-input {
 	flex: 1;
 	min-width: 0;
-	width: 100%;
 	border-radius: 6px;
 	border: 1px solid var(--background-modifier-border);
 	background: var(--background-primary);
@@ -2306,6 +2304,67 @@
 	font-size: 0.78rem;
 	font-family: inherit;
 	color: var(--text-normal);
+}
+
+.hearth-taskdetail-every {
+	flex: 0 0 auto;
+	font-size: 0.76rem;
+	color: var(--text-muted);
+}
+
+.hearth-taskdetail-every.is-disabled {
+	opacity: 0.4;
+}
+
+.hearth-taskdetail-interval {
+	flex: 0 0 3.5em;
+	width: 3.5em;
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	padding: 4px 6px;
+	font-size: 0.78rem;
+	font-family: inherit;
+	color: var(--text-normal);
+}
+
+.hearth-taskdetail-input:disabled,
+.hearth-taskdetail-interval:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+/* The edit dialog gives the detail fields a little more room. */
+.hearth-taskdetail-modal .hearth-taskdetail {
+	gap: 8px;
+	margin: 8px 0;
+}
+
+/* Minimalistic list-mode header: task count on the left, add control right. */
+.hearth-tasks-listhead {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 2px 2px 6px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	margin-bottom: 6px;
+}
+
+.hearth-tasks-listhead-count {
+	font-size: 0.76rem;
+	font-weight: 600;
+	color: var(--text-muted);
+}
+
+.hearth-tasks-listhead-actions {
+	display: flex;
+	align-items: flex-start;
+	gap: 4px;
+}
+
+.hearth-tasks-listadd {
+	margin-bottom: 6px;
 }
 
 /* ---- Activity heatmap card ------------------------------------------ */
@@ -2433,6 +2492,15 @@
 	background: var(--text-faint);
 }
 
+/* Five distinct priority colours (highest → lowest). Highest is a filled
+   deep red; high a lighter red; medium orange; low blue; lowest a muted blue.
+   Highest/lowest also get a thin ring so they read apart from high/low even
+   for colour-blind users or at a glance. */
+.hearth-task-priority.is-highest .hearth-task-priority-dot {
+	background: var(--color-pink, #d01e5b);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-pink, #d01e5b) 35%, transparent);
+}
+
 .hearth-task-priority.is-high .hearth-task-priority-dot {
 	background: var(--color-red, #e05252);
 }
@@ -2443,6 +2511,11 @@
 
 .hearth-task-priority.is-low .hearth-task-priority-dot {
 	background: var(--color-blue, #4a8fe0);
+}
+
+.hearth-task-priority.is-lowest .hearth-task-priority-dot {
+	background: transparent;
+	border: 1.5px solid var(--color-blue, #4a8fe0);
 }
 
 .hearth-task-priority-label {

@@ -132,16 +132,18 @@ toolbar; configure each one from the card itself (title, content, colors, size).
   note** (like the Kanban plugin — the card becomes a link), or **delete** it.
   A column's **check icon** marks it a *done column*, so cards complete
   automatically when dragged or added there (and the ones already in it
-  complete at once). Turn on **Tasks-plugin metadata** to parse the
-  [obsidian-tasks](https://github.com/obsidian-tasks-group/obsidian-tasks)
-  emoji fields on each card — priority (🔺⏫🔼🔽⏬), recurrence (🔁), and the
-  start (🛫), scheduled (⏳), due (📅) and done (✅) dates — shown as compact
-  indicators on the card (priority as a coloured dot on board cards, a labelled
-  chip in the list) and used for sorting. Both the **add-card form** and the
-  right-click **task-metadata editor** provide fields for priority, recurrence
-  and the start/scheduled/due dates, written back as those markers; checking a
-  card off stamps its ✅ done date (and unchecking removes it). Leave the mode
-  off to read the board as-is.
+  complete at once). Turn on **Dates & priorities** to read the marks each card
+  carries (compatible with [obsidian-tasks](https://github.com/obsidian-tasks-group/obsidian-tasks)):
+  a five-level priority (🔺⏫🔼🔽⏬, each a distinct colour), a repeat (🔁), and
+  the start (🛫), scheduled (⏳), due (📅) and done (✅) dates — shown as compact
+  indicators (priority as a coloured dot on board cards, a labelled chip in the
+  list) and used for sorting. The **add-card form** and the right-click
+  **Edit dates & priority** dialog both provide fields: a priority menu, a
+  deterministic repeat picker (daily/weekly/monthly/yearly × an interval), and
+  start/scheduled/due date pickers — where a repeat and fixed dates are
+  mutually exclusive. Checking a card off stamps its ✅ done date (unchecking
+  removes it). The list layout gains a minimalistic header with the task count
+  and a quick-add. Leave the mode off to read the board as plain text.
   Everything is written back in Kanban's own format, so the board stays fully
   editable in the Kanban plugin.
 - **Mini calendar** — a month grid resolved from the core Daily notes plugin's
@@ -312,6 +314,13 @@ load. Adding a language is a matter of copying `en.ts`, translating the values
 [`src/locales/README.md`](src/locales/README.md) for the walkthrough.
 
 ## Shipped:
+
+> **v1.6.8.7-beta** — Kanban date/priority polish: all five priorities now
+> have distinct colours (highest/lowest read apart from high/low), the repeat
+> picker is a deterministic dropdown + interval (no free text), a repeat and
+> fixed dates are mutually exclusive, and the list layout gains a minimalistic
+> header (task count + quick-add). The feature is now called simply **Dates &
+> priorities**.
 
 > **v1.6.8.6-beta** — fuller obsidian-tasks metadata on Kanban cards: start
 > (🛫), scheduled (⏳) and done (✅) dates alongside due, a 5-level priority

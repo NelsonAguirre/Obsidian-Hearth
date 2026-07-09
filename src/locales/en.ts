@@ -452,11 +452,12 @@ export const en = {
 				"note in scope with a “kanban-plugin” frontmatter key.",
 			kanbanBoardPlaceholder: "Auto-detect",
 			pickBoard: "Pick a Kanban board",
-			kanbanExtended: "Tasks-plugin metadata",
+			kanbanExtended: "Dates & priorities",
 			kanbanExtendedDesc:
-				"Parse the obsidian-tasks emoji metadata inside each card (📅 due, " +
-				"⏫/🔼/🔽 priority, 🔁 recurrence) so due dates and priorities show and " +
-				"sort. Off reads cards as-is (plain text).",
+				"Read the dates, priority and repeat marks written on each card " +
+				"(compatible with the obsidian-tasks plugin) so they show as " +
+				"indicators, sort the list, and can be edited from the card. Off " +
+				"reads cards as plain text.",
 			layout: "Layout",
 			layoutDesc:
 				"List, or a Kanban board grouped by status. On the board, drag cards " +
@@ -626,7 +627,7 @@ export const en = {
 			addCard: "Add card",
 			addCardPlaceholder: "Card text…",
 			convertToNote: "Convert to note",
-			editMetadata: "Edit task metadata",
+			editMetadata: "Edit dates & priority",
 			deleteCard: "Delete card",
 			save: "Save",
 			cancel: "Cancel",
@@ -636,8 +637,12 @@ export const en = {
 			startDate: "Start date",
 			scheduledDate: "Scheduled date",
 			doneDate: "Done date",
-			recurrenceLabel: "Recurrence",
-			recurrencePlaceholder: "e.g. every week",
+			recurrenceLabel: "Repeat",
+			recurrenceNever: "Never",
+			recurrenceEvery: "every",
+			recurrenceInterval: "Repeat interval",
+			recurrenceUnits: { day: "Daily", week: "Weekly", month: "Monthly", year: "Yearly" },
+			taskCount: (n: number) => (n === 1 ? "1 task" : `${n} tasks`),
 			priority: "Priority",
 			priorityNone: "No priority",
 			priorityHighest: "Highest priority",
