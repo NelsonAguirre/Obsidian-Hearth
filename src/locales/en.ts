@@ -458,6 +458,12 @@ export const en = {
 				"(compatible with the obsidian-tasks plugin) so they show as " +
 				"indicators, sort the list, and can be edited from the card. Off " +
 				"reads cards as plain text.",
+			checkboxExtended: "Dates & priorities",
+			checkboxExtendedDesc:
+				"Read the dates, priority and repeat marks written inline on each " +
+				"checkbox (compatible with the obsidian-tasks plugin) so they show as " +
+				"indicators, sort the list, and can be edited from the item's " +
+				"right-click menu. Off reads checkboxes as plain text.",
 			layout: "Layout",
 			layoutDesc:
 				"List, or a Kanban board grouped by status. On the board, drag cards " +
@@ -653,6 +659,15 @@ export const en = {
 			priorityMedium: "Medium priority",
 			priorityLow: "Low priority",
 			priorityLowest: "Lowest priority",
+			sort: "Sort",
+			sortReverse: "Reverse order",
+			sortLabels: {
+				smart: "Smart",
+				due: "Due date",
+				priority: "Priority",
+				created: "Date created",
+				alpha: "Alphabetical",
+			},
 		},
 	},
 

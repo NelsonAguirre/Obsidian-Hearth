@@ -102,7 +102,12 @@ toolbar; configure each one from the card itself (title, content, colors, size).
   frontmatter, or reads a [Kanban](https://github.com/obsidian-community/obsidian-kanban)
   plugin board note. Folder whitelist/blacklist for scope. Click **+** (top-right,
   TaskNotes source) to create a new task via TaskNotes' own command. Tasks are
-  sorted by **due → scheduled → priority → created**. Due dates show as short
+  sorted by **due → scheduled → priority → created**, and every list and board
+  carries a minimalistic, always-visible **sort control** — pick **Smart**
+  (that default chain), **Due date**, **Priority**, **Date created** or
+  **Alphabetical**, and optionally **reverse** it. The choice is remembered per
+  card, and incomplete tasks always sort ahead of completed ones. Due dates
+  show as short
   relative labels (**Today**, **Tomorrow**, **Yesterday**, the weekday for the
   rest of the week, **Next Friday** / **Last Friday** for the week after, then
   a compact "15 Jul"). They also accept **natural-language input**: write
@@ -110,8 +115,11 @@ toolbar; configure each one from the card itself (title, content, colors, size).
   wording in a TaskNotes `due` field) and Hearth resolves it to a date. Plain
   checkboxes also read the full **obsidian-tasks marks** — priority
   (🔺⏫🔼🔽⏬), a repeat (🔁), and the start/scheduled/due/done dates — showing
-  them as indicators and letting you edit them (right-click → **Edit dates &
-  priority**); empty checkboxes (`- [ ]`) are ignored.
+  them as indicators and letting you edit them (right-click a checkbox → **Edit
+  dates & priority**, in either the list or the Kanban board). This is a
+  per-card **Dates & priorities** toggle (on by default, the same switch the
+  Kanban source has); turn it off to read checkboxes as plain text, leaving any
+  emoji untouched in the visible text. Empty checkboxes (`- [ ]`) are ignored.
 - **Recurring tasks** — TaskNotes tasks with a `recurrence` RRULE show a **↻**
   badge next to the next-occurrence date (read from `scheduled`), tinted with
   the accent color so recurring items stand out at a glance. Hovering the date
@@ -321,6 +329,15 @@ load. Adding a language is a matter of copying `en.ts`, translating the values
 [`src/locales/README.md`](src/locales/README.md) for the walkthrough.
 
 ## Shipped:
+
+> **v1.6.8.9-beta** — Tasks-card parity and polish: the Markdown-checkbox source
+> gains its own **Dates & priorities** toggle (on by default) mirroring the
+> Kanban source, so checkboxes can be read as plain text; **right-click a
+> checkbox** to edit its dates & priority now works on the Kanban board too (not
+> just the list); every list and board gets a minimalistic, always-visible
+> **sort control** (Smart / Due / Priority / Created / Alphabetical, reversible)
+> that persists per card; and the list **"show completed"** toggle now adds
+> completed tasks *below* open ones instead of letting them crowd the list out.
 
 > **v1.6.8.8-beta** — plain Markdown checkboxes now read the full obsidian-tasks
 > marks too (priority, repeat, dates) with the same indicators and editor; a

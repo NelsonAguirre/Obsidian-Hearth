@@ -2433,6 +2433,59 @@
 	margin-bottom: 6px;
 }
 
+/* Minimalistic, always-visible sort control (list header + Kanban header). */
+.hearth-tasks-sort {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	height: 22px;
+	padding: 0 7px;
+	border-radius: 7px;
+	border: 1px solid transparent;
+	background: transparent;
+	color: var(--text-muted);
+	font-size: 0.72rem;
+	font-weight: 600;
+	cursor: pointer;
+	pointer-events: auto;
+	transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.hearth-tasks-sort:hover,
+.hearth-tasks-sort:focus-visible {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.hearth-tasks-sort.is-reversed {
+	color: var(--text-normal);
+}
+
+.hearth-tasks-sort .svg-icon {
+	width: 13px;
+	height: 13px;
+}
+
+.hearth-tasks-sort-label {
+	line-height: 1;
+}
+
+/* Kanban board header: sort control on the left, add control on the right. */
+.hearth-kanban-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 2px 2px 6px;
+	margin-bottom: 6px;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* In the Kanban header the add button sits inline, so keep it always visible. */
+.hearth-kanban-head .hearth-task-add {
+	opacity: 1;
+}
+
 /* ---- Activity heatmap card ------------------------------------------ */
 .hearth-heatmap {
 	display: flex;

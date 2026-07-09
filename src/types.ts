@@ -67,6 +67,21 @@ export interface TasksConfig {
 	 * priorities show and sort — interoperable with the obsidian-tasks plugin.
 	 * When false (default) cards are read as-is (plain text). */
 	kanbanExtended?: boolean;
+	/** Checkbox source: when true (default), parse the Tasks-plugin emoji
+	 * metadata written inline on each `- [ ]` item (📅 due, ⏳ scheduled, 🛫 start,
+	 * ⏫/🔼/🔽 priority, 🔁 recurrence, ✅ done) so dates and priorities show as
+	 * indicators, sort the list, and can be edited from the item's right-click
+	 * menu. When false, checkboxes are read as plain text (the emoji stay in the
+	 * visible text and no metadata is written on completion). Mirrors
+	 * `kanbanExtended` for the Kanban source. */
+	checkboxExtended?: boolean;
+	/** Persistent sort order for the list/board, chosen from the card's own sort
+	 * control. "smart" (default) is the due → scheduled → priority → created
+	 * chain; the others sort by a single field. Incomplete tasks always sort
+	 * before completed ones regardless of key. */
+	sortKey?: "smart" | "due" | "priority" | "created" | "alpha";
+	/** Reverse the chosen sort direction. */
+	sortReverse?: boolean;
 	/** How `folders` is applied. "all" (default) scans the whole vault. */
 	folderScope?: "all" | "whitelist" | "blacklist";
 	folders?: string[];

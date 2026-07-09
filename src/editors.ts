@@ -690,6 +690,22 @@ export class CardSettingsModal extends Modal {
 				);
 		}
 
+		// Checkbox source: parse the inline Tasks-plugin metadata (dates, priority,
+		// repeat) — the counterpart of the Kanban "Dates & priorities" toggle. On
+		// by default; storing `false` opts out and reads checkboxes as plain text.
+		if ((cfg.source ?? "checkbox") === "checkbox") {
+			new Setting(containerEl)
+				.setName(t().editors.tasks.checkboxExtended)
+				.setDesc(t().editors.tasks.checkboxExtendedDesc)
+				.addToggle((tg) =>
+					tg.setValue(cfg.checkboxExtended ?? true).onChange((v) => {
+						cfg.checkboxExtended = v ? undefined : false;
+						this.opts.save();
+						this.render();
+					}),
+				);
+		}
+
 		new Setting(containerEl)
 			.setName(t().editors.tasks.layout)
 			.setDesc(t().editors.tasks.layoutDesc)

@@ -2166,12 +2166,6 @@ function taskNotesAddButton(view: HomeView, parent: HTMLElement): void {
 	});
 }
 
-/** A "+" header (top-right) for TaskNotes' create-task command, used above the
- * Kanban-layout board. */
-function renderTaskNotesAddButton(view: HomeView, container: HTMLElement): void {
-	taskNotesAddButton(view, container.createDiv("hearth-tasks-head"));
-}
-
 /** A minimalistic header for the list layout: the task count on the left and a
  * source-appropriate add control on the right (TaskNotes' create command, or a
  * Kanban quick-add into the first column). */
@@ -2187,6 +2181,8 @@ function renderTasksListHeader(
 	const head = container.createDiv("hearth-tasks-head hearth-tasks-listhead");
 	head.createSpan({ cls: "hearth-tasks-listhead-count", text: t().cards.tasks.taskCount(count) });
 	const actions = head.createDiv("hearth-tasks-listhead-actions");
+	// Persistent sort control, offered in every source/layout.
+	renderTaskSortControl(view, cfg, actions, refresh);
 	if (source === "tasknotes") {
 		// TaskNotes add is a single command button, so it sits in the header.
 		taskNotesAddButton(view, actions);
@@ -2324,37 +2320,125 @@ function renderTaskDescription(parent: HTMLElement, description: string): void {
 	}
 }
 
-/** Sort tasks by: due date → scheduled date → priority → created date.
- * Dates are compared as strings (YYYY-MM-DD sorts lexically). Priority uses
- * the coarse high/medium/low/other level. Created is the file's ctime (epoch). */
-function sortTasks(hits: TaskHit[]): void {
-	const rank = (p: string | undefined): number => {
-		switch (priorityLevel(p ?? "")) {
-			case "high":
-				return 0;
-			case "medium":
-				return 1;
-			case "low":
-				return 2;
+/** Whether a line-based task's inline Tasks-plugin metadata (dates, priority,
+ * repeat marks) is managed — parsed for display/sorting and written on edits.
+ * Kanban cards (identified by `boardColumn`) follow `kanbanExtended` (off by
+ * default); plain checkboxes follow `checkboxExtended` (on by default). */
+function taskMetaEnabled(cfg: TasksConfig, hit: TaskHit): boolean {
+	return hit.boardColumn ? (cfg.kanbanExtended ?? false) : (cfg.checkboxExtended ?? true);
+}
+
+/** Coarse rank of a priority value for ordering: high → medium → low → other. */
+function priorityRank(p: string | undefined): number {
+	switch (priorityLevel(p ?? "")) {
+		case "high":
+			return 0;
+		case "medium":
+			return 1;
+		case "low":
+			return 2;
+		default:
+			return 3;
+	}
+}
+
+/** The default "smart" ordering: due date → scheduled date → priority → created
+ * date. Dates compare as strings (YYYY-MM-DD sorts lexically); tasks missing a
+ * date sort after those that have one. */
+function compareSmart(a: TaskHit, b: TaskHit): number {
+	if (a.due && b.due) return a.due < b.due ? -1 : a.due > b.due ? 1 : 0;
+	if (a.due) return -1;
+	if (b.due) return 1;
+	if (a.scheduled && b.scheduled) return a.scheduled < b.scheduled ? -1 : a.scheduled > b.scheduled ? 1 : 0;
+	if (a.scheduled) return -1;
+	if (b.scheduled) return 1;
+	const pa = priorityRank(a.priority);
+	const pb = priorityRank(b.priority);
+	if (pa !== pb) return pa - pb;
+	return a.created - b.created;
+}
+
+/** Sort tasks according to the card's persistent sort setting. Incomplete tasks
+ * always come before completed ones (so "show completed" adds them below rather
+ * than crowding out open work); within each group the chosen key applies, and
+ * `sortReverse` flips that key (not the incomplete/complete grouping). */
+function sortTasks(hits: TaskHit[], cfg: TasksConfig): void {
+	const key = cfg.sortKey ?? "smart";
+	const reverse = !!cfg.sortReverse;
+	const compare = (a: TaskHit, b: TaskHit): number => {
+		switch (key) {
+			case "due": {
+				const ad = effectiveDate(a);
+				const bd = effectiveDate(b);
+				if (ad && bd) return ad < bd ? -1 : ad > bd ? 1 : 0;
+				if (ad) return -1;
+				if (bd) return 1;
+				return a.created - b.created;
+			}
+			case "priority": {
+				const d = priorityRank(a.priority) - priorityRank(b.priority);
+				return d !== 0 ? d : compareSmart(a, b);
+			}
+			case "created":
+				return a.created - b.created;
+			case "alpha":
+				return (a.text || a.file.basename).localeCompare(b.text || b.file.basename);
 			default:
-				return 3;
+				return compareSmart(a, b);
 		}
 	};
 	hits.sort((a, b) => {
-		// 1. Due date (earlier first; tasks without a due date sort after).
-		if (a.due && b.due) return a.due < b.due ? -1 : a.due > b.due ? 1 : 0;
-		if (a.due) return -1;
-		if (b.due) return 1;
-		// 2. Scheduled date (same logic as due).
-		if (a.scheduled && b.scheduled) return a.scheduled < b.scheduled ? -1 : a.scheduled > b.scheduled ? 1 : 0;
-		if (a.scheduled) return -1;
-		if (b.scheduled) return 1;
-		// 3. Priority (high → medium → low → other).
-		const pa = rank(a.priority);
-		const pb = rank(b.priority);
-		if (pa !== pb) return pa - pb;
-		// 4. Created date (oldest first).
-		return a.created - b.created;
+		if (a.done !== b.done) return a.done ? 1 : -1;
+		const c = compare(a, b);
+		return reverse ? -c : c;
+	});
+}
+
+/** Available sort keys, in the order shown in the sort menu. */
+const TASK_SORT_KEYS: NonNullable<TasksConfig["sortKey"]>[] = ["smart", "due", "priority", "created", "alpha"];
+
+/** A minimalistic, always-visible sort control: a small button showing the
+ * active sort that opens a menu to pick a key or reverse the direction. The
+ * choice is saved to the card config so it persists across reloads, and it is
+ * offered in every layout and source (list header and Kanban board header). */
+function renderTaskSortControl(view: HomeView, cfg: TasksConfig, parent: HTMLElement, refresh: () => void): void {
+	const active = cfg.sortKey ?? "smart";
+	const labels = t().cards.tasks.sortLabels;
+	const btn = parent.createEl("button", {
+		cls: "hearth-tasks-sort",
+		attr: { "aria-label": t().cards.tasks.sort, title: t().cards.tasks.sort },
+	});
+	setIcon(btn, "arrow-up-down");
+	btn.createSpan({ cls: "hearth-tasks-sort-label", text: labels[active] });
+	if (cfg.sortReverse) btn.addClass("is-reversed");
+	btn.addEventListener("click", (e) => {
+		e.stopPropagation();
+		const menu = new Menu();
+		for (const key of TASK_SORT_KEYS) {
+			menu.addItem((item) =>
+				item
+					.setTitle(labels[key])
+					.setChecked(active === key)
+					.onClick(() => {
+						cfg.sortKey = key === "smart" ? undefined : key;
+						void view.plugin.saveData(view.plugin.settings);
+						refresh();
+					}),
+			);
+		}
+		menu.addSeparator();
+		menu.addItem((item) =>
+			item
+				.setTitle(t().cards.tasks.sortReverse)
+				.setChecked(!!cfg.sortReverse)
+				.setIcon("arrow-down-up")
+				.onClick(() => {
+					cfg.sortReverse = cfg.sortReverse ? undefined : true;
+					void view.plugin.saveData(view.plugin.settings);
+					refresh();
+				}),
+		);
+		menu.showAtMouseEvent(e);
 	});
 }
 
@@ -2374,9 +2458,6 @@ async function loadAndRenderTasks(
 			emptyState(container, "list-todo", t().cards.empty.tasksEnable);
 			return;
 		}
-		// A quick "+" to create a new task via TaskNotes' own command. In list
-		// layout the header carries it instead, so only add it above the board.
-		if (cfg.layout === "kanban") renderTaskNotesAddButton(view, container);
 		hits = collectTaskNotesTasks(view, cfg);
 	} else if (source === "kanban") {
 		const board = await collectKanbanTasks(view, cfg);
@@ -2390,9 +2471,14 @@ async function loadAndRenderTasks(
 		hits = await collectCheckboxTasks(view, cfg);
 	}
 
-	sortTasks(hits);
+	sortTasks(hits, cfg);
 
 	if (cfg.layout === "kanban") {
+		// A minimalistic board header carrying the persistent sort control (and,
+		// for TaskNotes, its quick-add command), above the columns.
+		const head = container.createDiv("hearth-kanban-head");
+		renderTaskSortControl(view, cfg, head, refresh);
+		if (source === "tasknotes") taskNotesAddButton(view, head);
 		renderTaskKanban(view, cfg, hits, container, refresh, boardColumns);
 		return;
 	}
@@ -2435,10 +2521,11 @@ function renderTaskRow(
 		check.checked = hit.done;
 		check.addEventListener("click", (e) => e.stopPropagation());
 		check.addEventListener("change", () => {
-			// Keep the ✅ done date in sync: checkbox tasks always track it; Kanban
-			// cards do so only in extended mode (a plain board stays plain).
+			// Keep the ✅ done date in sync only when metadata is managed for this
+			// task (checkbox tasks by default, Kanban cards in extended mode); a
+			// plain task stays plain.
 			const done = check.checked;
-			const ext = hit.boardColumn ? (cfg.kanbanExtended ?? false) : true;
+			const ext = taskMetaEnabled(cfg, hit);
 			void setKanbanCardDone(view, hit, done, ext).then((ok) => {
 				if (!ok) new Notice(t().notices.taskChangedOnDisk);
 				refresh();
@@ -2763,7 +2850,7 @@ function renderTaskKanban(
 			check.addEventListener("mousedown", stop);
 			check.addEventListener("pointerdown", stop);
 			check.addEventListener("change", () => {
-				void setKanbanCardDone(view, hit, check.checked, extended).then((ok) => {
+				void setKanbanCardDone(view, hit, check.checked, taskMetaEnabled(cfg, hit)).then((ok) => {
 					if (!ok) new Notice(t().notices.taskChangedOnDisk);
 					refresh();
 				});
@@ -2781,9 +2868,9 @@ function renderTaskKanban(
 			const open = () => void openTask(view, hit);
 			cardEl.addEventListener("click", open);
 			makeClickable(cardEl, open, hit.text || hit.file.basename);
-			// Kanban source: right-click menu (edit metadata, convert to note,
-			// delete) on the card.
-			if (source === "kanban" && hit.line >= 0) attachKanbanCardMenu(view, cfg, hit, cardEl, refresh);
+			// Line-based cards (Kanban cards and plain checkboxes) get the
+			// right-click menu: edit metadata, plus convert/delete for Kanban.
+			if (hit.line >= 0) attachKanbanCardMenu(view, cfg, hit, cardEl, refresh);
 		}
 
 		// Kanban source: a per-column "add card" affordance that appends a new
@@ -3073,8 +3160,11 @@ class TaskMetadataModal extends Modal {
  * reading the full obsidian-tasks emoji metadata (priority, repeat, and the
  * start/scheduled/due/done dates) off each line — the same set the Kanban
  * source understands — so plain checkboxes get the same indicators, sorting and
- * editing. The metadata is stripped from the displayed text. */
+ * editing. The metadata is stripped from the displayed text. When the card's
+ * "Dates & priorities" toggle is off, checkboxes are read as plain text: the
+ * emoji stay in the visible text and no dates/priority are parsed. */
 async function collectCheckboxTasks(view: HomeView, cfg: TasksConfig): Promise<TaskHit[]> {
+	const extended = cfg.checkboxExtended ?? true;
 	const files = view.app.vault.getMarkdownFiles().filter((f) => inTaskScope(f.path, cfg));
 	const hits: TaskHit[] = [];
 	for (const file of files) {
@@ -3085,6 +3175,23 @@ async function collectCheckboxTasks(view: HomeView, cfg: TasksConfig): Promise<T
 			if (!match) return;
 			const raw = match[2].trim();
 			if (!raw) return; // ignore empty checkboxes ("- [ ]")
+			const done = match[1].toLowerCase() === "x";
+			if (!extended) {
+				// Plain mode: keep the line's text verbatim, no metadata parsing.
+				hits.push({
+					file,
+					line: i,
+					text: raw,
+					done,
+					due: null,
+					dueRaw: null,
+					scheduled: null,
+					start: null,
+					doneDate: null,
+					created: file.stat.ctime,
+				});
+				return;
+			}
 			// The due date accepts natural-language wording (today, next friday,
 			// in 3 days, …) which we resolve to a date; the rest are ISO dates.
 			const dueExpr = readEmojiField(raw, "📅");
@@ -3098,7 +3205,7 @@ async function collectCheckboxTasks(view: HomeView, cfg: TasksConfig): Promise<T
 				file,
 				line: i,
 				text: stripTaskMetadata(raw),
-				done: match[1].toLowerCase() === "x",
+				done,
 				due,
 				dueRaw,
 				scheduled: readEmojiDate(raw, "⏳") || null,
@@ -3536,8 +3643,12 @@ function attachKanbanCardMenu(
 	refresh: () => void,
 ): void {
 	const isKanban = !!hit.boardColumn;
-	// Kanban cards read marks only in extended mode; checkboxes always do.
-	const canEditMeta = isKanban ? !!cfg.kanbanExtended : true;
+	// Metadata editing is offered wherever the marks are managed (checkboxes by
+	// default, Kanban cards in extended mode).
+	const canEditMeta = taskMetaEnabled(cfg, hit);
+	// Nothing to show for a plain checkbox with metadata off — leave the native
+	// context menu alone rather than popping an empty one.
+	if (!canEditMeta && !isKanban) return;
 	el.addEventListener("contextmenu", (e) => {
 		e.preventDefault();
 		e.stopPropagation();
