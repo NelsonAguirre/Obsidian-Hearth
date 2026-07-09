@@ -1,6 +1,6 @@
 {
 	"name": "hearth",
-	"version": "1.6.8.8-beta",
+	"version": "1.6.8.9-beta",
 	"description": "A beautiful, customizable home screen for your vault — search, dashboard, and launcher in one.",
 	"main": "main.js",
 	"scripts": {
