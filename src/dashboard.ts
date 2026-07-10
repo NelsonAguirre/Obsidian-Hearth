@@ -9,6 +9,7 @@ import {
 	activeCards,
 	cloneCard,
 	DashboardCard,
+	effectiveCardBlur,
 	effectiveCardOpacity,
 	effectiveColumns,
 	effectiveFitToPage,
@@ -16,6 +17,7 @@ import {
 	effectiveRowHeight,
 	removeCard,
 	renderCards,
+	resolveCardBlur,
 	setCardPinned,
 } from "./types";
 import {
@@ -62,8 +64,9 @@ export function renderDashboard(
 
 	const grid = container.createDiv("hearth-grid");
 	grid.toggleClass("is-arranging", view.arrangeMode);
-	// Board-level default; per-card overrides are set in the render loop below.
+	// Board-level defaults; per-card overrides are set in the render loop below.
 	grid.style.setProperty("--card-opacity", String(effectiveCardOpacity(s)));
+	grid.style.setProperty("--card-blur", String(effectiveCardBlur(s)));
 	const fit = effectiveFitToPage(s);
 	// In fit-to-page mode the board is locked to one screen, so leave the
 	// min-height to CSS (which clips the overflow). Otherwise grow the board
@@ -99,6 +102,12 @@ export function renderDashboard(
 		if (card.cardOpacity != null) {
 			el.style.setProperty("--card-opacity", String(card.cardOpacity));
 		}
+		if (card.cardBlur != null) {
+			el.style.setProperty("--card-blur", String(card.cardBlur));
+		}
+		// Only cards whose resolved blur is > 0 get the backdrop-filter, so blur-off
+		// cards never pay for an extra compositing layer.
+		if (resolveCardBlur(s, card) > 0) el.addClass("has-blur");
 
 		const head = el.createDiv("hearth-card-head");
 		if (view.arrangeMode) {

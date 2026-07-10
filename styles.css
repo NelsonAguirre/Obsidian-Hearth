@@ -410,6 +410,18 @@
 	transition: box-shadow 120ms ease, transform 120ms ease;
 }
 
+/* Frosted glass: blur what's behind a translucent card. --card-blur is a
+ * unitless px number set on the grid (board/global default) and, when a card
+ * overrides it, on the card. The property is applied only via .has-blur — added
+ * by the renderer solely when the resolved blur is > 0 — so cards without blur
+ * never pay the cost of a backdrop-filter compositing layer. Only shows when
+ * the surface is translucent (card opacity < 100%); card content stays sharp,
+ * as backdrop-filter blurs only what's behind the element. */
+.hearth-card.has-blur {
+	-webkit-backdrop-filter: blur(calc(var(--card-blur, 0) * 1px));
+	backdrop-filter: blur(calc(var(--card-blur, 0) * 1px));
+}
+
 /* While dragging/resizing, drop position transitions so the card tracks the
    pointer 1:1 and sits above its neighbours. */
 .hearth-card.is-moving,

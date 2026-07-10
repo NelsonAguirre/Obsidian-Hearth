@@ -428,6 +428,9 @@ export interface DashboardCard {
 	/** Override the card surface opacity for this card (undefined = dashboard
 	 * / global). 0 = fully transparent, 1 = fully opaque. */
 	cardOpacity?: number;
+	/** Override the card surface backdrop blur (frosted glass) for this card, in
+	 * pixels (undefined = dashboard / global). 0 = no blur. */
+	cardBlur?: number;
 
 	// ---- Layout (legacy grid cell units) ----
 	// Kept as the seed for the free-form coordinates below: older layouts (and
@@ -485,6 +488,9 @@ export interface Dashboard {
 	maxWidth?: number;
 	/** Override the card surface opacity for this board (undefined = global). */
 	cardOpacity?: number;
+	/** Override the card surface backdrop blur (px) for this board (undefined =
+	 * global). */
+	cardBlur?: number;
 }
 
 export interface HomeSettings {
@@ -529,6 +535,9 @@ export interface HomeSettings {
 	compact: boolean;
 	/** Card background opacity (0 = fully transparent, 1 = fully opaque). */
 	cardOpacity: number;
+	/** Card surface backdrop blur in pixels — the frosted-glass strength behind
+	 * translucent cards. 0 = no blur. */
+	cardBlur: number;
 
 	// ---- Search filters ----
 	/** Group ids the user has hidden from the auto-detected filter row. */
@@ -600,6 +609,8 @@ export const DEFAULT_SETTINGS: HomeSettings = {
 
 	compact: false,
 	cardOpacity: 0.6,
+	// Off by default — frosted glass is opt-in, so existing boards look unchanged.
+	cardBlur: 0,
 
 	hiddenFilters: [],
 
@@ -768,6 +779,20 @@ export function resolveCardOpacity(s: HomeSettings, card: DashboardCard): number
 	return typeof v === "number" && !Number.isNaN(v) ? Math.max(0, Math.min(1, v)) : 1;
 }
 
+/** Effective card backdrop blur (px) for the active board (per-dashboard
+ * override or global). 0 = no frosted-glass blur. Clamped to a sane range. */
+export function effectiveCardBlur(s: HomeSettings): number {
+	const v = activeDashboard(s).cardBlur ?? s.cardBlur;
+	return typeof v === "number" && !Number.isNaN(v) ? Math.max(0, Math.min(40, v)) : 0;
+}
+
+/** Resolve the per-card blur override (px), falling back to the board/global
+ * value from effectiveCardBlur. */
+export function resolveCardBlur(s: HomeSettings, card: DashboardCard): number {
+	const v = card.cardBlur ?? effectiveCardBlur(s);
+	return typeof v === "number" && !Number.isNaN(v) ? Math.max(0, Math.min(40, v)) : 0;
+}
+
 /** Remove a card from whichever list holds it (a board or the pinned set). */
 export function removeCard(s: HomeSettings, card: DashboardCard): void {
 	for (const d of s.dashboards) {
@@ -864,6 +889,7 @@ export function migrateSettings(s: HomeSettings, raw: Record<string, unknown>): 
 	}
 	if (typeof s.rowHeight !== "number" || s.rowHeight <= 0) s.rowHeight = 92;
 	if (typeof s.cardOpacity !== "number") s.cardOpacity = 0.6;
+	if (typeof s.cardBlur !== "number") s.cardBlur = 0;
 	if (typeof s.backgroundOpacity !== "number") s.backgroundOpacity = 0.35;
 	if (typeof s.backgroundBlur !== "number") s.backgroundBlur = 6;
 	// Fit-to-page is the default for fresh installs; existing users keep their

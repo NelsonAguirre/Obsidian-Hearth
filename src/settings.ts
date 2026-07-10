@@ -14,7 +14,8 @@ type NumericSettingKey =
 	| "maxWidth"
 	| "backgroundOpacity"
 	| "backgroundBlur"
-	| "cardOpacity";
+	| "cardOpacity"
+	| "cardBlur";
 
 /** Keys of HomeSettings whose default lives in DEFAULT_SETTINGS as a string and
  * would be awkward to reconstruct by hand (frontmatter field names, the search
@@ -709,6 +710,20 @@ export class HomeSettingTab extends PluginSettingTab {
 					await this.save();
 				});
 			this.addSliderReset(cardOpacity, sl, "cardOpacity");
+		});
+
+		const cardBlur = new Setting(containerEl)
+			.setName(t().settings.dashboard.cardBlur)
+			.setDesc(t().settings.dashboard.cardBlurDesc);
+		cardBlur.addSlider((sl) => {
+			sl.setLimits(0, 24, 1)
+				.setValue(s.cardBlur)
+				.setDynamicTooltip()
+				.onChange(async (v) => {
+					s.cardBlur = v;
+					await this.save();
+				});
+			this.addSliderReset(cardBlur, sl, "cardBlur");
 		});
 
 		new Setting(containerEl)

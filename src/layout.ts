@@ -168,6 +168,7 @@ function sanitizeCard(raw: unknown, index: number): DashboardCard | null {
 	if (typeof r.sandboxTrusted === "boolean") card.sandboxTrusted = r.sandboxTrusted;
 	if (typeof r.pinned === "boolean") card.pinned = r.pinned;
 	if (typeof r.cardOpacity === "number") card.cardOpacity = r.cardOpacity;
+	if (typeof r.cardBlur === "number") card.cardBlur = r.cardBlur;
 	if (Array.isArray(r.links)) {
 		card.links = r.links.map(sanitizeLink).filter((l): l is LinkItem => l !== null);
 	}

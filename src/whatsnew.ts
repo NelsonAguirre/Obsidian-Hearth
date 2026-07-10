@@ -25,6 +25,23 @@ export interface ChangelogEntry {
  */
 export const CHANGELOG: ChangelogEntry[] = [
 	{
+		version: "1.7.1.11-beta",
+		tldr:
+			"Frosted glass: cards can now blur what's behind them. A global “Card " +
+			"blur” default (Settings → Dashboard), a per-dashboard override, and a " +
+			"per-card blur in each card's Colors section — all pair with card opacity.",
+		features: [
+			"Card blur (frosted glass): a backdrop blur behind translucent cards, at " +
+				"every level that card opacity already had — a global default in " +
+				"Settings, a per-dashboard override, and a per-card slider in the card's " +
+				"Colors section. It shows when card opacity is below 100% and blurs only " +
+				"the dashboard behind the card, leaving the card's content sharp. Off by " +
+				"default, so existing boards are unchanged; only cards with blur > 0 take " +
+				"on the effect.",
+		],
+		fixes: [],
+	},
+	{
 		version: "1.7.1.10-beta",
 		tldr:
 			"Plugin view opacity, take two: the previous fix only cleared the outer " +

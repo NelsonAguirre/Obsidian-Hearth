@@ -149,6 +149,7 @@ export const en = {
 			fitOptionFit: "Fit to one page",
 			fitOptionScroll: "Allow scrolling",
 			cardOpacity: "Card opacity",
+			cardBlur: "Card blur",
 			done: "Done",
 			overriding: "Overriding the global default.",
 			usingGlobal: (value: number | string) => `Using global default (${value}).`,
@@ -296,6 +297,9 @@ export const en = {
 			cardOpacity: "Card opacity",
 			cardOpacityDesc:
 				"Transparent card backgrounds so the dashboard background shows through.",
+			cardBlur: "Card blur",
+			cardBlurDesc:
+				"Frosted-glass blur behind translucent cards. Needs card opacity below 100% to show. 0 = off.",
 			cards: "Cards",
 			cardsDesc:
 				"Add and configure cards on the dashboard itself: open the home view, " +
@@ -625,6 +629,8 @@ export const en = {
 			clearBackground: "Clear background",
 			cardOpacity: "Card opacity",
 			cardOpacityDesc: "Transparent card surface (overrides the dashboard default).",
+			cardBlur: "Card blur",
+			cardBlurDesc: "Frosted-glass blur behind this card (overrides the dashboard default). Needs opacity below 100%.",
 			useDashboardDefault: "Use dashboard default",
 		},
 		size: {

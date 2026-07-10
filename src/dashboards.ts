@@ -119,6 +119,7 @@ function showDashboardMenu(view: HomeView, dash: Dashboard, evt: MouseEvent): vo
 				if (dash.fitToPage != null) copy.fitToPage = dash.fitToPage;
 				if (dash.maxWidth != null) copy.maxWidth = dash.maxWidth;
 				if (dash.cardOpacity != null) copy.cardOpacity = dash.cardOpacity;
+				if (dash.cardBlur != null) copy.cardBlur = dash.cardBlur;
 				if (dash.background) copy.background = { ...dash.background };
 				const i = s.dashboards.findIndex((d) => d.id === dash.id);
 				s.dashboards.splice(i + 1, 0, copy);
@@ -258,6 +259,20 @@ class DashboardSettingsModal extends Modal {
 			0.05,
 			(v) => {
 				dash.cardOpacity = v;
+				this.commit();
+			},
+		);
+
+		this.overrideSlider(
+			contentEl,
+			t().dashboards.modal.cardBlur,
+			dash.cardBlur,
+			s.cardBlur,
+			0,
+			24,
+			1,
+			(v) => {
+				dash.cardBlur = v;
 				this.commit();
 			},
 		);

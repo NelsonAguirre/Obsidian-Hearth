@@ -1324,6 +1324,32 @@ export class CardSettingsModal extends Modal {
 					this.render();
 				}),
 		);
+
+		const blurRow = new Setting(containerEl)
+			.setName(t().editors.colors.cardBlur)
+			.setDesc(t().editors.colors.cardBlurDesc);
+		blurRow.addSlider((sl) =>
+			sl
+				.setLimits(0, 24, 1)
+				.setValue(card.cardBlur ?? 0)
+				.setDynamicTooltip()
+				.onChange((v) => {
+					card.cardBlur = v;
+					this.opts.save();
+					this.opts.rerender();
+				}),
+		);
+		blurRow.addExtraButton((b) =>
+			b
+				.setIcon("rotate-ccw")
+				.setTooltip(t().editors.colors.useDashboardDefault)
+				.onClick(() => {
+					card.cardBlur = undefined;
+					this.opts.save();
+					this.opts.rerender();
+					this.render();
+				}),
+		);
 	}
 
 	private sizeSection(containerEl: HTMLElement): void {
