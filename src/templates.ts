@@ -1,6 +1,7 @@
 import { App } from "obsidian";
 import { DashboardCard } from "./types";
 import { isDataviewAvailable } from "./dataview";
+import { isLeafViewAvailable } from "./leafview";
 import { t } from "./i18n";
 
 /** A ready-made card preset offered by the "Add card" picker. */
@@ -144,6 +145,13 @@ export const CARD_TEMPLATES: CardTemplate[] = [
 		icon: "database",
 		build: () => ({ kind: "dataview", title: "Dataview", dataview: {}, w: 6, h: 4 }),
 		available: (app) => isDataviewAvailable(app),
+	},
+	{
+		id: "leaf",
+		name: "Plugin view (beta)",
+		icon: "layout-panel-left",
+		build: () => ({ kind: "leaf", title: "Plugin view", leafView: {}, w: 5, h: 4 }),
+		available: (app) => isLeafViewAvailable(app),
 	},
 ];
 

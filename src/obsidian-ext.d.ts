@@ -21,6 +21,19 @@ declare module "obsidian" {
 			/** The loaded community plugin instances, keyed by id. */
 			plugins: Record<string, unknown>;
 		};
+		/** Registry of every view type registered via `registerView` (core and
+		 * community). `viewByType` is keyed by the view-type id. Used by the
+		 * "leaf" card to discover hostable side-panel views. */
+		viewRegistry?: {
+			viewByType?: Record<string, unknown>;
+		};
+	}
+
+	/** WorkspaceLeaf's constructor isn't part of the public typings, but a
+	 * detached leaf (`new WorkspaceLeaf(app)`) is the documented-by-practice way
+	 * community plugins host a view outside the workspace layout. */
+	interface WorkspaceLeaf {
+		containerEl: HTMLElement;
 	}
 
 	interface FileManager {

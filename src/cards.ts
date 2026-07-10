@@ -33,6 +33,7 @@ import {
 import { evaluate as evaluateCalc } from "./calculator";
 import { cachedRates, loadRates } from "./currency";
 import { getDataviewApi } from "./dataview";
+import { isViewTypeHostable, mountLeafView } from "./leafview";
 import { EXCALIDRAW_PLUGIN_ID, iconForFile, isExcalidraw } from "./filetypes";
 import { QueryHit, runQuery, searchFileContents } from "./query";
 import { confirmAction, makeClickable } from "./ui";
@@ -147,6 +148,47 @@ export function renderCardBody(
 		case "dataview":
 			renderDataview(view, card, body, component);
 			break;
+		case "leaf":
+			renderLeaf(view, card, body, component);
+			break;
+	}
+}
+
+// ---- Leaf (hosted plugin side-panel view) -------------------------------
+
+/** A card that hosts another plugin's (or a core) registered side-panel view —
+ * a calendar, outline, tag pane, kanban board, and so on — by mounting a
+ * detached workspace leaf inside the card body. Beta.
+ *
+ * The card shows a friendly prompt when it has no view chosen yet, or when the
+ * chosen view type isn't registered right now (the plugin that provides it is
+ * disabled or uninstalled). Mounting is best-effort: `mountLeafView` never
+ * throws, and the hosted leaf's lifecycle is tied to `component`, so it is torn
+ * down cleanly on the next redraw or when the dashboard closes. */
+function renderLeaf(
+	view: HomeView,
+	card: DashboardCard,
+	body: HTMLElement,
+	component: Component,
+): void {
+	const type = card.leafView?.viewType?.trim();
+	if (!type) {
+		emptyState(body, "layout-panel-left", t().cards.empty.leafPickView);
+		return;
+	}
+	if (!isViewTypeHostable(view.app, type)) {
+		emptyState(body, "layout-panel-left", t().cards.empty.leafViewMissing);
+		return;
+	}
+
+	const host = body.createDiv("hearth-leaf-host");
+	// Hosted views are natively interactive and manage their own scrolling, so
+	// let them fill the card edge-to-edge like canvas/Excalidraw embeds do.
+	body.addClass("hearth-card-body-live");
+	if (!mountLeafView(view.app, type, host, component)) {
+		host.remove();
+		body.removeClass("hearth-card-body-live");
+		emptyState(body, "layout-panel-left", t().cards.empty.leafViewMissing);
 	}
 }
 

@@ -568,6 +568,25 @@
 	height: 100%;
 }
 
+/* "Leaf" card: host for a detached workspace leaf (a plugin's side-panel view).
+ * The host and the leaf's own container both fill the card body so the hosted
+ * view lays out to the card size instead of its natural sidebar width/height. */
+.hearth-leaf-host {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-height: 0;
+	width: 100%;
+	overflow: hidden;
+}
+
+.hearth-leaf-host > .workspace-leaf {
+	flex: 1 1 auto;
+	min-height: 0;
+	width: 100%;
+	height: 100%;
+}
+
 /* Obsidian renders a canvas/Excalidraw embed as:
  *   <p> › span.internal-embed › (div.embed-title + svg.canvas-minimap)
  * To make the drawing fill the card without leaving an empty "chin" (or, worse,

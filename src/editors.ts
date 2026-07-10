@@ -2,6 +2,7 @@ import { App, Modal, Notice, Setting } from "obsidian";
 import { CommandPickerModal, FilePickerModal } from "./pickers";
 import { CardKind, ClockConfig, DashboardCard, EmbedView, LinkItem, TasksConfig } from "./types";
 import { confirmAction } from "./ui";
+import { listLeafViewTypes } from "./leafview";
 import { t } from "./i18n";
 
 /** Whether an embed target points at a Bases (.base) file. */
@@ -265,7 +266,46 @@ export class CardSettingsModal extends Modal {
 			case "dataview":
 				this.dataviewEditor(containerEl);
 				break;
+			case "leaf":
+				this.leafEditor(containerEl);
+				break;
 		}
+	}
+
+	/** Pick which registered side-panel view the "leaf" card hosts. The dropdown
+	 * lists every hostable view type found in the app right now (core panes plus
+	 * whatever community plugins have registered), so the choices depend on which
+	 * plugins are enabled. */
+	private leafEditor(containerEl: HTMLElement): void {
+		const cfg = (this.card.leafView ??= {});
+		const types = listLeafViewTypes(this.app);
+
+		const setting = new Setting(containerEl)
+			.setName(t().editors.leaf.view)
+			.setDesc(t().editors.leaf.viewDesc);
+
+		if (types.length === 0) {
+			setting.setDesc(t().editors.leaf.none);
+			return;
+		}
+
+		setting.addDropdown((d) => {
+			d.addOption("", t().editors.leaf.pickPlaceholder);
+			for (const vt of types) d.addOption(vt.type, vt.name);
+			// Keep a previously-chosen view selectable even if its plugin is now
+			// disabled, so switching the plugin back on restores the card as-is.
+			const current = cfg.viewType?.trim();
+			if (current && !types.some((vt) => vt.type === current)) {
+				d.addOption(current, current);
+			}
+			d.setValue(current ?? "").onChange((v) => {
+				cfg.viewType = v || undefined;
+				this.opts.save();
+				this.opts.rerender();
+			});
+		});
+
+		new Setting(containerEl).setName(t().editors.leaf.note).setDesc(t().editors.leaf.noteDesc);
 	}
 
 	/** Second-view controls for an embed card: pick a second file to embed, and

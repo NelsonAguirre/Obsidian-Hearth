@@ -16,7 +16,8 @@ export type CardKind =
 	| "search"
 	| "heatmap"
 	| "calculator"
-	| "dataview";
+	| "dataview"
+	| "leaf";
 
 /** A single command tile inside a "commands" card. */
 export interface CommandItem {
@@ -249,6 +250,15 @@ export interface DataviewConfig {
 	columnWidths?: number[];
 }
 
+/** Per-card configuration for a "leaf" card, which hosts another plugin's (or a
+ * core) registered side-panel view inside the dashboard. Beta. */
+export interface LeafViewConfig {
+	/** The registered view type to host, e.g. "calendar", "outline",
+	 * "tag-pane". This is the id a plugin passes to `registerView`. Empty means
+	 * the card hasn't been pointed at a view yet and shows an empty state. */
+	viewType?: string;
+}
+
 /** Per-card configuration for a "clock" card. All fields are optional; omitted
  * fields fall back to the defaults that match the original clock behaviour. */
 export interface ClockConfig {
@@ -365,6 +375,8 @@ export interface DashboardCard {
 	calculator?: CalculatorConfig;
 	/** kind === "dataview": the query text and language. */
 	dataview?: DataviewConfig;
+	/** kind === "leaf": the registered view type to host. */
+	leafView?: LeafViewConfig;
 
 	// ---- Live content ----
 	/** Auto-refresh interval in seconds for live content (embed / web). 0 or

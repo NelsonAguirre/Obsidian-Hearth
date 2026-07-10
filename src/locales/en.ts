@@ -348,6 +348,7 @@ export const en = {
 			heatmap: "Activity heatmap",
 			calculator: "Calculator",
 			dataview: "Dataview query",
+			leaf: "Plugin view (beta)",
 		},
 		linkTypes: {
 			note: "Note",
@@ -604,6 +605,19 @@ export const en = {
 			queryDqlPlaceholder: "TABLE file.mtime AS \"Modified\" FROM #project SORT file.mtime DESC",
 			queryJsPlaceholder: "dv.list(dv.pages('#project').file.link)",
 		},
+		leaf: {
+			view: "View to host",
+			viewDesc:
+				"A registered side-panel view from a core or community plugin " +
+				"(calendar, outline, tag pane, kanban…). The list depends on which " +
+				"plugins are enabled.",
+			pickPlaceholder: "Pick a view…",
+			none: "No hostable views found. Enable a plugin that provides a side-panel view.",
+			note: "Beta",
+			noteDesc:
+				"Hosts another plugin's view inside the card. Some views expect a " +
+				"sidebar and may render or size oddly here.",
+		},
 		colors: {
 			heading: "Colors",
 			headingDesc: "Accent and background tint for this card.",
@@ -656,6 +670,8 @@ export const en = {
 			kanbanNoBoard: "No Kanban board found — pick a board note in card settings, or create one with the Kanban plugin",
 			dataviewEnable: "Enable the Dataview plugin to run queries",
 			dataviewNoQuery: "Set a Dataview query in card settings",
+			leafPickView: "Pick a plugin view in card settings",
+			leafViewMissing: "This view isn't available — enable the plugin that provides it",
 		},
 		embed: {
 			editHint: "Double-click to edit",
@@ -895,6 +911,7 @@ export const en = {
 		text: "Text / jot-down",
 		calculator: "Calculator",
 		dataview: "Dataview query",
+		leaf: "Plugin view (beta)",
 	},
 
 	// ---- File-type filter labels ---------------------------------------

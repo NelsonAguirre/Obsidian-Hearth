@@ -25,6 +25,24 @@ export interface ChangelogEntry {
  */
 export const CHANGELOG: ChangelogEntry[] = [
 	{
+		version: "1.7.1.8-beta",
+		tldr:
+			"New “Plugin view” card (beta): host another plugin's — or a core — " +
+			"side-panel view (calendar, outline, tag pane, kanban…) right on the " +
+			"dashboard. Offered in Add card, with the view chosen in card settings.",
+		features: [
+			"Plugin view card (beta): a new card kind that embeds a registered " +
+				"side-panel view inside a dashboard card. Pick from the views your " +
+				"enabled plugins (and Obsidian's core panes) provide; the card hosts a " +
+				"detached workspace leaf, so it never appears in your saved layout or " +
+				"disturbs other panes. Some views expect a real sidebar and may size " +
+				"oddly — hence beta. It cleans itself up on redraw and when the " +
+				"dashboard closes, and shows a friendly prompt when the view's plugin " +
+				"is disabled.",
+		],
+		fixes: [],
+	},
+	{
 		version: "1.7.1.7-beta",
 		tldr:
 			"Embed zoom now reflows instead of just visually scaling, so a zoomed " +
