@@ -25,6 +25,30 @@ export interface ChangelogEntry {
  */
 export const CHANGELOG: ChangelogEntry[] = [
 	{
+		version: "1.7.1.13-beta",
+		tldr:
+			"Settings, reorganized. The plugin settings tab now opens on a category " +
+			"ribbon (Appearance · Search · Dashboard · Behaviour · Integrations · " +
+			"Backup · About) with each group tidied into its own sections, every " +
+			"setting carries a description, and a new About tab holds GitHub, " +
+			"Report-issue and Ko-fi links.",
+		features: [
+			"Settings ribbon: the plugin settings tab is now split into category tabs " +
+				"pinned at the top — click one to see just that group's sections, instead " +
+				"of scrolling one long list. Settings were regrouped so each lives under " +
+				"the right heading (search options with the search bar, mobile mode with " +
+				"behaviour, card opacity/blur under Dashboard, and so on).",
+			"About tab: quick links to the GitHub repository and the issue tracker, plus " +
+				"a low-key Ko-fi “Tip me” button and the running version.",
+		],
+		fixes: [
+			"Every setting now has a description, and more fields carry a reset (↺) " +
+				"button back to their default — including the logo and background value in " +
+				"plugin settings and the recent-files count, query max-results, max-tasks, " +
+				"web auto-refresh and card size in card settings.",
+		],
+	},
+	{
 		version: "1.7.1.12-beta",
 		tldr:
 			"New default look: frosted-glass cards out of the box (card opacity 0.50, " +

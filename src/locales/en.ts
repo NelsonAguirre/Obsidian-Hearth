@@ -182,6 +182,48 @@ export const en = {
 		resetField: "Reset to default",
 		collapseSection: "Collapse section",
 		expandSection: "Expand section",
+		/** Category ribbon at the top of the settings tab. */
+		tabs: {
+			appearance: "Appearance",
+			search: "Search",
+			dashboard: "Dashboard",
+			behaviour: "Behaviour",
+			integrations: "Integrations",
+			backup: "Backup",
+			about: "About",
+		},
+		/** Sub-section headings used to group settings within a tab. */
+		sections: {
+			home: "Home",
+			homeDesc: "Title, logo and overall content width.",
+			searchBar: "Search bar",
+			searchBarDesc: "How the search field looks and what it does.",
+			grid: "Grid & spacing",
+			gridDesc: "How the card grid is sized and spaced.",
+			cardSurface: "Card surface",
+			cardSurfaceDesc: "Transparency and frosted-glass blur applied to every card.",
+			startup: "Startup & tabs",
+			startupDesc: "When and where the home view opens.",
+			mobileMode: "Mobile mode",
+			mobileModeDesc: "How Hearth behaves on phones and tablets.",
+		},
+		about: {
+			heading: "About Hearth",
+			headingDesc: "Project links, support and version.",
+			github: "GitHub repository",
+			githubDesc: "Browse the source, star the project, or read the changelog.",
+			githubButton: "Open GitHub",
+			reportIssue: "Report an issue",
+			reportIssueDesc: "Hit a bug or have a feature idea? Open an issue on GitHub.",
+			reportIssueButton: "Report issue",
+			kofi: "Support Hearth",
+			kofiDesc:
+				"Hearth is free and always will be. If it's earned a spot on your home " +
+				"screen, you can leave a tip — completely optional, no features are locked.",
+			kofiButton: "Tip me on Ko-fi",
+			version: (v: string) => `Version ${v}`,
+			versionDesc: "The Hearth build you're running.",
+		},
 		appearance: {
 			heading: "Appearance",
 			headingDesc:
@@ -189,6 +231,7 @@ export const en = {
 			showTitle: "Show title",
 			showTitleDesc: "Display the big title/logo at the top.",
 			title: "Title",
+			titleDesc: "The heading text shown at the top of the home view.",
 			logo: "Logo",
 			logoDesc:
 				"An emoji or short text shown next to the title. Leave empty for the Hearth crystal icon.",
@@ -208,6 +251,7 @@ export const en = {
 				"then select it again.",
 			omnisearchInstallLink: "Open Omnisearch in Community plugins",
 			showNewNoteButton: "Show “New note” button",
+			showNewNoteButtonDesc: "Show the action button beside the search field.",
 			newNoteButtonMode: "Search-bar button",
 			newNoteButtonModeDesc:
 				"What the button beside the search bar does: create a new note, or " +
@@ -222,11 +266,13 @@ export const en = {
 			headingDesc:
 				"The backdrop behind the home view, and how much it shows through.",
 			type: "Background type",
+			typeDesc: "What to show behind the home view.",
 			value: "Background value",
 			valueColorDesc: "A CSS color, e.g. #1e1e2e or rgb(30,30,46).",
 			valueImageDesc: "A vault image path, e.g. Attachments/bg.png.",
 			valueUrlDesc: "A direct image URL.",
 			opacity: "Opacity",
+			opacityDesc: "How much the background shows through. Lower is more subtle.",
 			blur: "Blur",
 			blurDesc: "Background blur in pixels.",
 			labels: {
@@ -258,6 +304,8 @@ export const en = {
 				"search field and filters instead. Each button can run a command, " +
 				"open a note or file, or open a URL — just like a launchpad tile.",
 			showActionBar: "Show action bar",
+			showActionBarDesc:
+				"Show the row of action buttons beneath the search field in Mobile mode.",
 			labelPlaceholder: "Label",
 			iconPlaceholder: "Icon",
 			commandTooltip: (id: string) => `Command: ${id}`,
@@ -276,10 +324,13 @@ export const en = {
 				"— match these to whatever TaskNotes' own settings have them mapped to " +
 				"(the defaults below are TaskNotes' own defaults).",
 			statusField: "Status field",
+			statusFieldDesc: "Frontmatter field read for a task's status.",
 			dueField: "Due date field",
+			dueFieldDesc: "Frontmatter field read for a task's due date.",
 			priorityField: "Priority field",
 			priorityFieldDesc: "Frontmatter field read for a task's priority indicator.",
 			doneValue: "“Done” status value",
+			doneValueDesc: "The status value that marks a TaskNotes task complete.",
 		},
 		filters: {
 			heading: "Search filters",
@@ -326,8 +377,11 @@ export const en = {
 	editors: {
 		title: "Card settings",
 		type: "Type",
+		typeDesc: "What this card shows.",
 		cardTitle: "Title",
+		cardTitleDesc: "Shown in the card's header. Leave empty for a headerless card.",
 		cardTitlePlaceholder: "Title",
+		resetSize: "Reset to default size",
 		removeCard: "Remove card",
 		removeCardTitle: "Remove card?",
 		removeCardMessage: (name: string) => `Remove "${name}" from the dashboard?`,
@@ -399,6 +453,7 @@ export const en = {
 		},
 		recent: {
 			count: "Number of files",
+			countDesc: "How many recently-opened files to list.",
 		},
 		calendar: {
 			weekNumbers: "Week numbers",
@@ -423,9 +478,11 @@ export const en = {
 				"tags, or key:value for a frontmatter property.",
 			queryPlaceholder: "#project or status:active or meeting notes",
 			display: "Display",
+			displayDesc: "Show matches as a compact list or as tiles.",
 			displayList: "List",
 			displayTiles: "Tiles",
 			maxResults: "Max results",
+			maxResultsDesc: "The most matches to show at once.",
 		},
 		links: {
 			heading: "Links",

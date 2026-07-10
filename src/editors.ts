@@ -54,23 +54,29 @@ export class CardSettingsModal extends Modal {
 		contentEl.empty();
 		const card = this.card;
 
-		new Setting(contentEl).setName(t().editors.type).addDropdown((d) => {
-			(Object.keys(t().editors.kinds) as CardKind[]).forEach((k) => {
-				d.addOption(k, t().editors.kinds[k]);
+		new Setting(contentEl)
+			.setName(t().editors.type)
+			.setDesc(t().editors.typeDesc)
+			.addDropdown((d) => {
+				(Object.keys(t().editors.kinds) as CardKind[]).forEach((k) => {
+					d.addOption(k, t().editors.kinds[k]);
+				});
+				d.setValue(card.kind).onChange((v) => {
+					card.kind = v as CardKind;
+					this.opts.save();
+					this.render();
+				});
 			});
-			d.setValue(card.kind).onChange((v) => {
-				card.kind = v as CardKind;
-				this.opts.save();
-				this.render();
-			});
-		});
 
-		new Setting(contentEl).setName(t().editors.cardTitle).addText((txt) =>
-			txt.setPlaceholder(t().editors.cardTitlePlaceholder).setValue(card.title ?? "").onChange((v) => {
-				card.title = v;
-				this.opts.save();
-			}),
-		);
+		new Setting(contentEl)
+			.setName(t().editors.cardTitle)
+			.setDesc(t().editors.cardTitleDesc)
+			.addText((txt) =>
+				txt.setPlaceholder(t().editors.cardTitlePlaceholder).setValue(card.title ?? "").onChange((v) => {
+					card.title = v;
+					this.opts.save();
+				}),
+			);
 
 		this.contentSection(contentEl);
 		this.colorsSection(contentEl);
@@ -223,19 +229,24 @@ export class CardSettingsModal extends Modal {
 					);
 				this.refreshSetting(containerEl);
 				break;
-			case "recent":
-				new Setting(containerEl)
+			case "recent": {
+				const recent = new Setting(containerEl)
 					.setName(t().editors.recent.count)
-					.addText((t) => {
-						t.setValue(String(card.count ?? 8)).onChange((v) => {
-							const n = parseInt(v, 10);
-							card.count = Number.isNaN(n) ? undefined : n;
-							this.opts.save();
-						});
-						t.inputEl.type = "number";
-						t.inputEl.addClass("hearth-count-input");
+					.setDesc(t().editors.recent.countDesc);
+				recent.addText((t) => {
+					t.setValue(String(card.count ?? 8)).onChange((v) => {
+						const n = parseInt(v, 10);
+						card.count = Number.isNaN(n) ? undefined : n;
+						this.opts.save();
 					});
+					t.inputEl.type = "number";
+					t.inputEl.addClass("hearth-count-input");
+				});
+				this.addResetButton(recent, t().settings.resetField, () => {
+					card.count = undefined;
+				});
 				break;
+			}
 			case "links":
 				this.linksEditor(containerEl);
 				break;
@@ -548,26 +559,48 @@ export class CardSettingsModal extends Modal {
 						this.opts.save();
 					}),
 			);
-		new Setting(containerEl).setName(t().editors.savedSearch.display).addDropdown((d) => {
-			d.addOption("list", t().editors.savedSearch.displayList);
-			d.addOption("tiles", t().editors.savedSearch.displayTiles);
-			d.setValue(cfg.view ?? "list").onChange((v) => {
-				cfg.view = v === "list" ? undefined : (v as "tiles");
-				this.opts.save();
-				this.opts.rerender();
-			});
-		});
 		new Setting(containerEl)
-			.setName(t().editors.savedSearch.maxResults)
-			.addText((t) => {
-				t.setValue(String(cfg.count ?? 12)).onChange((v) => {
-					const n = parseInt(v, 10);
-					cfg.count = Number.isNaN(n) || n <= 0 ? undefined : n;
+			.setName(t().editors.savedSearch.display)
+			.setDesc(t().editors.savedSearch.displayDesc)
+			.addDropdown((d) => {
+				d.addOption("list", t().editors.savedSearch.displayList);
+				d.addOption("tiles", t().editors.savedSearch.displayTiles);
+				d.setValue(cfg.view ?? "list").onChange((v) => {
+					cfg.view = v === "list" ? undefined : (v as "tiles");
 					this.opts.save();
+					this.opts.rerender();
 				});
-				t.inputEl.type = "number";
-				t.inputEl.addClass("hearth-count-input");
 			});
+		const maxResults = new Setting(containerEl)
+			.setName(t().editors.savedSearch.maxResults)
+			.setDesc(t().editors.savedSearch.maxResultsDesc);
+		maxResults.addText((t) => {
+			t.setValue(String(cfg.count ?? 12)).onChange((v) => {
+				const n = parseInt(v, 10);
+				cfg.count = Number.isNaN(n) || n <= 0 ? undefined : n;
+				this.opts.save();
+			});
+			t.inputEl.type = "number";
+			t.inputEl.addClass("hearth-count-input");
+		});
+		this.addResetButton(maxResults, t().settings.resetField, () => {
+			cfg.count = undefined;
+		});
+	}
+
+	/** Add a reset (rotate-ccw) extra button that clears a field back to its
+	 * default, then saves and redraws so the input reflects the restored value. */
+	private addResetButton(setting: Setting, tooltip: string, onReset: () => void): void {
+		setting.addExtraButton((b) =>
+			b
+				.setIcon("rotate-ccw")
+				.setTooltip(tooltip)
+				.onClick(() => {
+					onReset();
+					this.opts.save();
+					this.render();
+				}),
+		);
 	}
 
 	/** Move an item within a list, then persist and re-render the editor. */
@@ -583,19 +616,22 @@ export class CardSettingsModal extends Modal {
 	 * cards update live from vault events and don't need this.) */
 	private refreshSetting(containerEl: HTMLElement): void {
 		const card = this.card;
-		new Setting(containerEl)
+		const setting = new Setting(containerEl)
 			.setName(t().editors.web.autoRefresh)
-			.setDesc(t().editors.web.autoRefreshDesc)
-			.addText((txt) => {
-				txt.setValue(String(card.refreshSec ?? 0)).onChange((v) => {
-					const n = parseInt(v, 10);
-					card.refreshSec = Number.isNaN(n) || n <= 0 ? undefined : n;
-					this.opts.save();
-				});
-				txt.inputEl.type = "number";
-				txt.inputEl.addClass("hearth-count-input");
-				txt.inputEl.setAttribute("aria-label", t().editors.web.refreshIntervalAria);
+			.setDesc(t().editors.web.autoRefreshDesc);
+		setting.addText((txt) => {
+			txt.setValue(String(card.refreshSec ?? 0)).onChange((v) => {
+				const n = parseInt(v, 10);
+				card.refreshSec = Number.isNaN(n) || n <= 0 ? undefined : n;
+				this.opts.save();
 			});
+			txt.inputEl.type = "number";
+			txt.inputEl.addClass("hearth-count-input");
+			txt.inputEl.setAttribute("aria-label", t().editors.web.refreshIntervalAria);
+		});
+		this.addResetButton(setting, t().settings.resetField, () => {
+			card.refreshSec = undefined;
+		});
 	}
 
 	private linksEditor(containerEl: HTMLElement): void {
@@ -1088,18 +1124,21 @@ export class CardSettingsModal extends Modal {
 				}),
 			);
 
-		new Setting(containerEl)
+		const maxTasks = new Setting(containerEl)
 			.setName(t().editors.tasks.maxTasks)
-			.setDesc(t().editors.tasks.maxTasksDesc)
-			.addText((t) => {
-				t.setValue(String(cfg.count ?? 10)).onChange((v) => {
-					const n = parseInt(v, 10);
-					cfg.count = Number.isNaN(n) || n <= 0 ? undefined : n;
-					this.opts.save();
-				});
-				t.inputEl.type = "number";
-				t.inputEl.addClass("hearth-count-input");
+			.setDesc(t().editors.tasks.maxTasksDesc);
+		maxTasks.addText((t) => {
+			t.setValue(String(cfg.count ?? 10)).onChange((v) => {
+				const n = parseInt(v, 10);
+				cfg.count = Number.isNaN(n) || n <= 0 ? undefined : n;
+				this.opts.save();
 			});
+			t.inputEl.type = "number";
+			t.inputEl.addClass("hearth-count-input");
+		});
+		this.addResetButton(maxTasks, t().settings.resetField, () => {
+			cfg.count = undefined;
+		});
 
 		new Setting(containerEl).setName(t().editors.tasks.folders).setHeading();
 		new Setting(containerEl).setName(t().editors.tasks.scope).addDropdown((d) => {
@@ -1382,6 +1421,10 @@ export class CardSettingsModal extends Modal {
 			txt.inputEl.type = "number";
 			txt.inputEl.addClass("hearth-count-input");
 			txt.inputEl.setAttribute("aria-label", t().editors.size.heightAria);
+		});
+		this.addResetButton(row, t().editors.resetSize, () => {
+			card.fw = undefined;
+			card.fh = undefined;
 		});
 	}
 

@@ -1,4 +1,4 @@
-import { App, Notice, PluginSettingTab, setIcon, Setting, SliderComponent, TextComponent } from "obsidian";
+import { App, ButtonComponent, Notice, PluginSettingTab, setIcon, Setting, SliderComponent, TextComponent } from "obsidian";
 import type HearthPlugin from "./main";
 import { FILE_TYPE_GROUPS, fileTypeLabel } from "./filetypes";
 import { CommandPickerModal } from "./pickers";
@@ -23,11 +23,42 @@ type NumericSettingKey =
  * value. */
 type StringSettingKey =
 	| "title"
+	| "logo"
 	| "searchPlaceholder"
+	| "backgroundValue"
 	| "taskNotesStatusField"
 	| "taskNotesDueField"
 	| "taskNotesPriorityField"
 	| "taskNotesDoneValue";
+
+/** The GitHub repository and support links surfaced in the About tab. */
+const GITHUB_URL = "https://github.com/ondreu/hearth";
+const GITHUB_ISSUES_URL = "https://github.com/ondreu/hearth/issues/new";
+const KOFI_URL = "https://ko-fi.com/ondru";
+
+/** A tab in the settings ribbon: an id (keys `t().settings.tabs`) and a Lucide
+ * icon shown beside the label. */
+type SettingsTabId =
+	| "appearance"
+	| "search"
+	| "dashboard"
+	| "behaviour"
+	| "integrations"
+	| "backup"
+	| "about";
+
+const SETTINGS_TABS: { id: SettingsTabId; icon: string }[] = [
+	{ id: "appearance", icon: "palette" },
+	{ id: "search", icon: "search" },
+	{ id: "dashboard", icon: "layout-dashboard" },
+	{ id: "behaviour", icon: "settings-2" },
+	{ id: "integrations", icon: "plug" },
+	{ id: "backup", icon: "archive" },
+	{ id: "about", icon: "info" },
+];
+
+/** localStorage key for the last-opened settings tab. */
+const ACTIVE_TAB_KEY = "hearth-settings-tab";
 
 export class HomeSettingTab extends PluginSettingTab {
 	plugin: HearthPlugin;
@@ -60,61 +91,93 @@ export class HomeSettingTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
+		containerEl.addClass("hearth-settings");
 
 		this.fileDatalist(containerEl);
 
-		// Each section is wrapped in a foldable container whose collapsed state
-		// is remembered across sessions in localStorage. Ordered by concern:
-		// look & feel, then search, then behaviour/mobile, then the dashboard
-		// and its cards, and finally layout backup/restore.
-		this.section(
-			containerEl,
-			t().settings.appearance.heading,
-			t().settings.appearance.headingDesc,
-			(body) => this.appearanceSection(body),
-		);
-		this.section(
-			containerEl,
-			t().settings.background.heading,
-			t().settings.background.headingDesc,
-			(body) => this.backgroundSection(body),
-		);
-		this.section(
-			containerEl,
-			t().settings.filters.heading,
-			t().settings.filters.headingDesc,
-			(body) => this.filtersSection(body),
-		);
-		this.section(
-			containerEl,
-			t().settings.behaviour.heading,
-			t().settings.behaviour.headingDesc,
-			(body) => this.behaviourSection(body),
-		);
-		this.section(
-			containerEl,
-			t().settings.mobileActions.heading,
-			t().settings.mobileActions.headingDesc,
-			(body) => this.mobileActionsSection(body),
-		);
-		this.section(
-			containerEl,
-			t().settings.dashboard.heading,
-			t().settings.dashboard.headingDesc,
-			(body) => this.dashboardSection(body),
-		);
-		this.section(
-			containerEl,
-			t().settings.tasks.heading,
-			t().settings.tasks.headingDesc,
-			(body) => this.tasksSection(body),
-		);
-		this.section(
-			containerEl,
-			t().settings.layout.heading,
-			t().settings.layout.headingDesc,
-			(body) => this.layoutSection(body),
-		);
+		// A ribbon of category tabs sits pinned at the top; only the active tab's
+		// sections render below it, keeping a long settings panel navigable. The
+		// active tab persists per-vault in localStorage.
+		const active = this.activeTab();
+		this.renderRibbon(containerEl, active);
+
+		const body = containerEl.createDiv("hearth-settings-tabbody");
+		this.renderTab(body, active);
+	}
+
+	/** The currently-selected ribbon tab, defaulting to the first. */
+	private activeTab(): SettingsTabId {
+		const saved = this.app.loadLocalStorage(ACTIVE_TAB_KEY);
+		return SETTINGS_TABS.some((tab) => tab.id === saved)
+			? (saved as SettingsTabId)
+			: SETTINGS_TABS[0].id;
+	}
+
+	/** Draw the category ribbon. Clicking a tab persists the choice and redraws. */
+	private renderRibbon(containerEl: HTMLElement, active: SettingsTabId): void {
+		const ribbon = containerEl.createDiv("hearth-settings-ribbon");
+		ribbon.setAttribute("role", "tablist");
+		for (const tab of SETTINGS_TABS) {
+			const label = t().settings.tabs[tab.id];
+			const btn = ribbon.createEl("button", { cls: "hearth-ribbon-tab" });
+			btn.setAttribute("role", "tab");
+			btn.toggleClass("is-active", tab.id === active);
+			btn.setAttribute("aria-selected", String(tab.id === active));
+			btn.setAttribute("aria-label", label);
+			const icon = btn.createSpan("hearth-ribbon-tab-icon");
+			setIcon(icon, tab.icon);
+			btn.createSpan({ cls: "hearth-ribbon-tab-label", text: label });
+			btn.addEventListener("click", () => {
+				this.app.saveLocalStorage(ACTIVE_TAB_KEY, tab.id);
+				this.display();
+			});
+		}
+	}
+
+	/** Render the sections that belong to a given tab. */
+	private renderTab(body: HTMLElement, tab: SettingsTabId): void {
+		const s = t().settings;
+		switch (tab) {
+			case "appearance":
+				this.section(body, s.sections.home, s.sections.homeDesc, (b) => this.homeSection(b));
+				this.section(body, s.background.heading, s.background.headingDesc, (b) =>
+					this.backgroundSection(b),
+				);
+				break;
+			case "search":
+				this.section(body, s.sections.searchBar, s.sections.searchBarDesc, (b) =>
+					this.searchBarSection(b),
+				);
+				this.section(body, s.filters.heading, s.filters.headingDesc, (b) => this.filtersSection(b));
+				break;
+			case "dashboard":
+				this.section(body, s.sections.grid, s.sections.gridDesc, (b) => this.gridSection(b));
+				this.section(body, s.sections.cardSurface, s.sections.cardSurfaceDesc, (b) =>
+					this.cardSurfaceSection(b),
+				);
+				// The cards themselves are added and configured on the board, not
+				// here — surface that as a plain informational row.
+				new Setting(body).setName(s.dashboard.cards).setDesc(s.dashboard.cardsDesc);
+				break;
+			case "behaviour":
+				this.section(body, s.sections.startup, s.sections.startupDesc, (b) => this.startupSection(b));
+				this.section(body, s.sections.mobileMode, s.sections.mobileModeDesc, (b) =>
+					this.mobileModeSection(b),
+				);
+				this.section(body, s.mobileActions.heading, s.mobileActions.headingDesc, (b) =>
+					this.mobileActionsSection(b),
+				);
+				break;
+			case "integrations":
+				this.section(body, s.tasks.heading, s.tasks.headingDesc, (b) => this.tasksSection(b));
+				break;
+			case "backup":
+				this.section(body, s.layout.heading, s.layout.headingDesc, (b) => this.layoutSection(b));
+				break;
+			case "about":
+				this.aboutSection(body);
+				break;
+		}
 	}
 
 	/** A shared <datalist> of vault files used by file-path inputs. */
@@ -234,9 +297,9 @@ export class HomeSettingTab extends PluginSettingTab {
 		);
 	}
 
-	// ---- Appearance -----------------------------------------------------
+	// ---- Home (title, logo, width) --------------------------------------
 
-	private appearanceSection(containerEl: HTMLElement): void {
+	private homeSection(containerEl: HTMLElement): void {
 		const s = this.plugin.settings;
 
 		new Setting(containerEl)
@@ -250,7 +313,8 @@ export class HomeSettingTab extends PluginSettingTab {
 			);
 
 		const title = new Setting(containerEl)
-			.setName(t().settings.appearance.title);
+			.setName(t().settings.appearance.title)
+			.setDesc(t().settings.appearance.titleDesc);
 		title.addText((txt) => {
 			txt.setValue(s.title).onChange(async (v) => {
 				s.title = v;
@@ -259,15 +323,36 @@ export class HomeSettingTab extends PluginSettingTab {
 			this.addTextReset(title, txt, "title");
 		});
 
-		new Setting(containerEl)
+		const logo = new Setting(containerEl)
 			.setName(t().settings.appearance.logo)
-			.setDesc(t().settings.appearance.logoDesc)
-			.addText((t) =>
-				t.setValue(s.logo).onChange(async (v) => {
-					s.logo = v;
+			.setDesc(t().settings.appearance.logoDesc);
+		logo.addText((txt) => {
+			txt.setValue(s.logo).onChange(async (v) => {
+				s.logo = v;
+				await this.save();
+			});
+			this.addTextReset(logo, txt, "logo");
+		});
+
+		const width = new Setting(containerEl)
+			.setName(t().settings.appearance.contentWidth)
+			.setDesc(t().settings.appearance.contentWidthDesc);
+		width.addSlider((sl) => {
+			sl.setLimits(700, 1600, 20)
+				.setValue(s.maxWidth)
+				.setDynamicTooltip()
+				.onChange(async (v) => {
+					s.maxWidth = v;
 					await this.save();
-				}),
-			);
+				});
+			this.addSliderReset(width, sl, "maxWidth");
+		});
+	}
+
+	// ---- Search bar -----------------------------------------------------
+
+	private searchBarSection(containerEl: HTMLElement): void {
+		const s = this.plugin.settings;
 
 		const searchPlaceholder = new Setting(containerEl)
 			.setName(t().settings.appearance.searchPlaceholder);
@@ -316,6 +401,7 @@ export class HomeSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName(t().settings.appearance.showNewNoteButton)
+			.setDesc(t().settings.appearance.showNewNoteButtonDesc)
 			.addToggle((t) =>
 				t.setValue(s.showNewNoteButton).onChange(async (v) => {
 					s.showNewNoteButton = v;
@@ -335,20 +421,6 @@ export class HomeSettingTab extends PluginSettingTab {
 						await this.save();
 					});
 			});
-
-		const width = new Setting(containerEl)
-			.setName(t().settings.appearance.contentWidth)
-			.setDesc(t().settings.appearance.contentWidthDesc);
-		width.addSlider((sl) => {
-			sl.setLimits(700, 1600, 20)
-				.setValue(s.maxWidth)
-				.setDynamicTooltip()
-				.onChange(async (v) => {
-					s.maxWidth = v;
-					await this.save();
-				});
-			this.addSliderReset(width, sl, "maxWidth");
-		});
 	}
 
 	// ---- Background -----------------------------------------------------
@@ -358,6 +430,7 @@ export class HomeSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName(t().settings.background.type)
+			.setDesc(t().settings.background.typeDesc)
 			.addDropdown((d) => {
 				(Object.keys(t().settings.background.labels) as BackgroundKind[]).forEach((k) => {
 					d.addOption(k, t().settings.background.labels[k]);
@@ -379,13 +452,14 @@ export class HomeSettingTab extends PluginSettingTab {
 						: t().settings.background.valueUrlDesc;
 			const setting = new Setting(containerEl)
 				.setName(t().settings.background.value)
-				.setDesc(desc)
-				.addText((t) =>
-					t.setValue(s.backgroundValue).onChange(async (v) => {
-						s.backgroundValue = v;
-						await this.save();
-					}),
-				);
+				.setDesc(desc);
+			setting.addText((txt) => {
+				txt.setValue(s.backgroundValue).onChange(async (v) => {
+					s.backgroundValue = v;
+					await this.save();
+				});
+				this.addTextReset(setting, txt, "backgroundValue");
+			});
 			if (s.backgroundKind === "image") {
 				setting.controlEl
 					.querySelector("input")
@@ -396,7 +470,8 @@ export class HomeSettingTab extends PluginSettingTab {
 		// Opacity/blur apply to every background except "none".
 		if (s.backgroundKind !== "none") {
 			const opacity = new Setting(containerEl)
-				.setName(t().settings.background.opacity);
+				.setName(t().settings.background.opacity)
+				.setDesc(t().settings.background.opacityDesc);
 			opacity.addSlider((sl) => {
 				sl.setLimits(0, 1, 0.05)
 					.setValue(s.backgroundOpacity)
@@ -424,9 +499,9 @@ export class HomeSettingTab extends PluginSettingTab {
 		}
 	}
 
-	// ---- Behaviour ------------------------------------------------------
+	// ---- Startup & tabs -------------------------------------------------
 
-	private behaviourSection(containerEl: HTMLElement): void {
+	private startupSection(containerEl: HTMLElement): void {
 		const s = this.plugin.settings;
 
 		new Setting(containerEl)
@@ -448,6 +523,12 @@ export class HomeSettingTab extends PluginSettingTab {
 					await this.save();
 				}),
 			);
+	}
+
+	// ---- Mobile mode ----------------------------------------------------
+
+	private mobileModeSection(containerEl: HTMLElement): void {
+		const s = this.plugin.settings;
 
 		new Setting(containerEl)
 			.setName(t().settings.behaviour.mobileSearchOnly)
@@ -467,6 +548,7 @@ export class HomeSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName(t().settings.mobileActions.showActionBar)
+			.setDesc(t().settings.mobileActions.showActionBarDesc)
 			.addToggle((t) =>
 				t.setValue(s.showMobileActionBar).onChange(async (v) => {
 					s.showMobileActionBar = v;
@@ -612,7 +694,8 @@ export class HomeSettingTab extends PluginSettingTab {
 		const s = this.plugin.settings;
 
 		const statusField = new Setting(containerEl)
-			.setName(t().settings.tasks.statusField);
+			.setName(t().settings.tasks.statusField)
+			.setDesc(t().settings.tasks.statusFieldDesc);
 		statusField.addText((txt) => {
 			txt.setValue(s.taskNotesStatusField).onChange(async (v) => {
 				s.taskNotesStatusField = v;
@@ -622,7 +705,8 @@ export class HomeSettingTab extends PluginSettingTab {
 		});
 
 		const dueField = new Setting(containerEl)
-			.setName(t().settings.tasks.dueField);
+			.setName(t().settings.tasks.dueField)
+			.setDesc(t().settings.tasks.dueFieldDesc);
 		dueField.addText((txt) => {
 			txt.setValue(s.taskNotesDueField).onChange(async (v) => {
 				s.taskNotesDueField = v;
@@ -643,7 +727,8 @@ export class HomeSettingTab extends PluginSettingTab {
 		});
 
 		const doneValue = new Setting(containerEl)
-			.setName(t().settings.tasks.doneValue);
+			.setName(t().settings.tasks.doneValue)
+			.setDesc(t().settings.tasks.doneValueDesc);
 		doneValue.addText((txt) => {
 			txt.setValue(s.taskNotesDoneValue).onChange(async (v) => {
 				s.taskNotesDoneValue = v;
@@ -673,9 +758,9 @@ export class HomeSettingTab extends PluginSettingTab {
 		}
 	}
 
-	// ---- Dashboard / cards ---------------------------------------------
+	// ---- Dashboard: grid & spacing --------------------------------------
 
-	private dashboardSection(containerEl: HTMLElement): void {
+	private gridSection(containerEl: HTMLElement): void {
 		const s = this.plugin.settings;
 
 		new Setting(containerEl)
@@ -697,6 +782,12 @@ export class HomeSettingTab extends PluginSettingTab {
 					await this.save();
 				}),
 			);
+	}
+
+	// ---- Dashboard: card surface (opacity / blur) -----------------------
+
+	private cardSurfaceSection(containerEl: HTMLElement): void {
+		const s = this.plugin.settings;
 
 		const cardOpacity = new Setting(containerEl)
 			.setName(t().settings.dashboard.cardOpacity)
@@ -725,10 +816,6 @@ export class HomeSettingTab extends PluginSettingTab {
 				});
 			this.addSliderReset(cardBlur, sl, "cardBlur");
 		});
-
-		new Setting(containerEl)
-			.setName(t().settings.dashboard.cards)
-			.setDesc(t().settings.dashboard.cardsDesc);
 	}
 
 	// ---- Layout import / export ----------------------------------------
@@ -787,5 +874,50 @@ export class HomeSettingTab extends PluginSettingTab {
 					});
 				});
 			});
+	}
+
+	// ---- About ----------------------------------------------------------
+
+	/** Project links, a low-key Ko-fi tip button, and the running version. */
+	private aboutSection(containerEl: HTMLElement): void {
+		const about = t().settings.about;
+
+		new Setting(containerEl)
+			.setName(about.heading)
+			.setDesc(about.headingDesc)
+			.setHeading();
+
+		new Setting(containerEl)
+			.setName(about.github)
+			.setDesc(about.githubDesc)
+			.addButton((b) => this.linkButton(b, "github", about.githubButton, GITHUB_URL));
+
+		new Setting(containerEl)
+			.setName(about.reportIssue)
+			.setDesc(about.reportIssueDesc)
+			.addButton((b) => this.linkButton(b, "bug", about.reportIssueButton, GITHUB_ISSUES_URL));
+
+		new Setting(containerEl)
+			.setName(about.kofi)
+			.setDesc(about.kofiDesc)
+			.addButton((b) => {
+				this.linkButton(b, "coffee", about.kofiButton, KOFI_URL);
+				b.buttonEl.addClass("hearth-kofi-btn");
+			});
+
+		new Setting(containerEl)
+			.setName(about.version(this.plugin.manifest.version))
+			.setDesc(about.versionDesc);
+	}
+
+	/** A button that shows an icon *and* a label (Obsidian's setButtonText wipes a
+	 * setIcon, so the content is built by hand) and opens `url` in the browser. */
+	private linkButton(b: ButtonComponent, icon: string, label: string, url: string): void {
+		b.setTooltip(url).onClick(() => window.open(url, "_blank"));
+		const el = b.buttonEl;
+		el.empty();
+		el.addClass("hearth-about-btn");
+		setIcon(el.createSpan("hearth-about-btn-icon"), icon);
+		el.createSpan({ text: label });
 	}
 }
