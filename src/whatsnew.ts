@@ -25,6 +25,26 @@ export interface ChangelogEntry {
  */
 export const CHANGELOG: ChangelogEntry[] = [
 	{
+		version: "1.7.1.2-beta",
+		tldr:
+			"A new Dataview card. When the Dataview community plugin is installed, " +
+			"the “Add card” menu gains a Dataview card that runs a Dataview query " +
+			"(DQL) or DataviewJS and renders the results — tables, lists, task lists — " +
+			"through Dataview's own renderers, so they look exactly as they do in a " +
+			"note and refresh live as the vault changes.",
+		features: [
+			"Dataview card: add a card that renders a Dataview query. It's only offered " +
+				"by the Add-card menu when Dataview is installed and enabled. Paste a " +
+				"query (TABLE / LIST / TASK, or switch to DataviewJS) in the card's " +
+				"settings and Hearth renders it with Dataview's own renderers — tables, " +
+				"lists and task lists look native and update live as notes change. Links " +
+				"in the results are clickable. Queries run without a “current note”, so " +
+				"global queries work fully; this.file-relative queries have no file to " +
+				"resolve to.",
+		],
+		fixes: [],
+	},
+	{
 		version: "1.7.1.1-beta",
 		tldr:
 			"Tasks-card list polish. The TaskNotes source can now treat several " +

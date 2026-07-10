@@ -347,6 +347,7 @@ export const en = {
 			search: "Query",
 			heatmap: "Activity heatmap",
 			calculator: "Calculator",
+			dataview: "Dataview query",
 		},
 		linkTypes: {
 			note: "Note",
@@ -578,6 +579,23 @@ export const en = {
 			keypadBasic: "Basic",
 			keypadScientific: "Scientific",
 		},
+		dataview: {
+			language: "Query type",
+			languageDesc:
+				"Dataview Query Language (TABLE / LIST / TASK) or DataviewJS code.",
+			languageDql: "Dataview query (DQL)",
+			languageJs: "DataviewJS",
+			query: "Query",
+			queryDqlDesc:
+				"A Dataview query, written exactly as inside a ```dataview code block " +
+				"(without the fences). Runs with no “current note”, so global queries " +
+				"work fully but this.file-relative queries have no file to resolve to.",
+			queryJsDesc:
+				"DataviewJS code, as inside a ```dataviewjs block (without the fences). " +
+				"The dv API is in scope. Runs arbitrary JavaScript — only use code you trust.",
+			queryDqlPlaceholder: "TABLE file.mtime AS \"Modified\" FROM #project SORT file.mtime DESC",
+			queryJsPlaceholder: "dv.list(dv.pages('#project').file.link)",
+		},
 		colors: {
 			heading: "Colors",
 			headingDesc: "Accent and background tint for this card.",
@@ -628,6 +646,8 @@ export const en = {
 			tasksEmpty: "No open tasks",
 			tasksNoMatch: "No tasks match the filter",
 			kanbanNoBoard: "No Kanban board found — pick a board note in card settings, or create one with the Kanban plugin",
+			dataviewEnable: "Enable the Dataview plugin to run queries",
+			dataviewNoQuery: "Set a Dataview query in card settings",
 		},
 		embed: {
 			editHint: "Double-click to edit",
@@ -842,6 +862,7 @@ export const en = {
 		heatmap: "Activity heatmap",
 		text: "Text / jot-down",
 		calculator: "Calculator",
+		dataview: "Dataview query",
 	},
 
 	// ---- File-type filter labels ---------------------------------------

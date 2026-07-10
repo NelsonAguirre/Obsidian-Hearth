@@ -1,4 +1,6 @@
+import { App } from "obsidian";
 import { DashboardCard } from "./types";
+import { isDataviewAvailable } from "./dataview";
 import { t } from "./i18n";
 
 /** A ready-made card preset offered by the "Add card" picker. */
@@ -9,6 +11,10 @@ export interface CardTemplate {
 	icon: string;
 	/** Builds the card content/size (id and coordinates are assigned later). */
 	build: () => Omit<DashboardCard, "id" | "x" | "y">;
+	/** When set, the template is only offered by the "Add card" picker if this
+	 * returns true — used to hide cards that depend on a community plugin (e.g.
+	 * the Dataview card) until that plugin is installed and enabled. */
+	available?: (app: App) => boolean;
 }
 
 export const CARD_TEMPLATES: CardTemplate[] = [
@@ -131,6 +137,13 @@ export const CARD_TEMPLATES: CardTemplate[] = [
 		name: "Calculator",
 		icon: "calculator",
 		build: () => ({ kind: "calculator", title: "Calculator", calculator: {}, w: 4, h: 3 }),
+	},
+	{
+		id: "dataview",
+		name: "Dataview query",
+		icon: "database",
+		build: () => ({ kind: "dataview", title: "Dataview", dataview: {}, w: 6, h: 4 }),
+		available: (app) => isDataviewAvailable(app),
 	},
 ];
 

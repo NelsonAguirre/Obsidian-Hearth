@@ -29,6 +29,7 @@ import {
 } from "./types";
 import { evaluate as evaluateCalc } from "./calculator";
 import { cachedRates, loadRates } from "./currency";
+import { getDataviewApi } from "./dataview";
 import { EXCALIDRAW_PLUGIN_ID, iconForFile, isExcalidraw } from "./filetypes";
 import { QueryHit, runQuery, searchFileContents } from "./query";
 import { confirmAction, makeClickable } from "./ui";
@@ -140,7 +141,60 @@ export function renderCardBody(
 		case "calculator":
 			renderCalculator(view, card, body);
 			break;
+		case "dataview":
+			renderDataview(view, card, body, component);
+			break;
 	}
+}
+
+// ---- Dataview query -----------------------------------------------------
+
+/** A card that renders a Dataview query (DQL or DataviewJS) through Dataview's
+ * own renderers, so tables, lists and task lists look exactly as they do in a
+ * note. Depends on the Dataview community plugin — the "Add card" picker only
+ * offers this card when Dataview is installed, and the card shows a friendly
+ * prompt if Dataview is later disabled. Dataview attaches its own refreshable
+ * renderer to `component`, so results update live as the vault (and Dataview's
+ * index) change, without Hearth having to re-run the query. */
+function renderDataview(
+	view: HomeView,
+	card: DashboardCard,
+	body: HTMLElement,
+	component: Component,
+): void {
+	const cfg = card.dataview ?? {};
+	const api = getDataviewApi(view.app);
+	if (!api) {
+		emptyState(body, "database", t().cards.empty.dataviewEnable);
+		return;
+	}
+	const query = (cfg.query ?? "").trim();
+	if (!query) {
+		emptyState(body, "code", t().cards.empty.dataviewNoQuery);
+		return;
+	}
+
+	const host = body.createDiv("hearth-dataview");
+	// The dashboard has no "current note", so queries run with an empty origin
+	// path: global queries (FROM #tag, folder scopes…) work fully, but a query
+	// that relies on `this.file` has no meaningful current file to resolve to.
+	const origin = "";
+	const run =
+		cfg.language === "js"
+			? api.executeJs(query, host, component, origin)
+			: api.execute(query, host, component, origin);
+	// execute/executeJs render their own errors inline, but guard the promise so
+	// an unexpected rejection surfaces as a readable message instead of an
+	// unhandled rejection in the console.
+	void Promise.resolve(run).catch((err: unknown) => {
+		host.empty();
+		const message = err instanceof Error ? err.message : String(err);
+		emptyState(host, "alert-triangle", message);
+	});
+	// Dataview renders internal links as anchors; wire them up so they open like
+	// links elsewhere on the dashboard (Obsidian only resolves link clicks inside
+	// a real Markdown view).
+	wireMarkdownLinks(view, host, origin);
 }
 
 // ---- Query (saved search) ----------------------------------------------

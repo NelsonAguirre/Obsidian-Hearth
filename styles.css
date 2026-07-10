@@ -2328,6 +2328,39 @@
 	line-height: 1.5;
 }
 
+/* A setting whose control is a wide, multi-line input: stack the control under
+   the name/description and let it span the full dialog width (Obsidian's
+   default puts a narrow control to the right of the label). */
+.hearth-setting-stacked {
+	display: block;
+}
+
+.hearth-setting-stacked .setting-item-control {
+	margin-top: 8px;
+	justify-content: stretch;
+}
+
+/* Dataview query editor: a monospaced, full-width code box. */
+.hearth-dataview-input {
+	width: 100%;
+	font-family: var(--font-monospace);
+	font-size: 0.82rem;
+	line-height: 1.5;
+	resize: vertical;
+}
+
+/* Dataview card body: let Dataview's own rendered output (tables, lists, task
+   lists) fill the width and scroll within the card. */
+.hearth-dataview {
+	width: 100%;
+	max-width: 100%;
+	overflow: auto;
+}
+
+.hearth-dataview table {
+	width: 100%;
+}
+
 /* Shared task-detail fields (priority, repeat, dates) — used by the Kanban
    add-card form and the edit dialog. Rows stack; label left, control right. */
 .hearth-taskdetail {

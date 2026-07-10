@@ -226,6 +226,18 @@ toolbar; configure each one from the card itself (title, content, colors, size).
   (basic or scientific, chosen in card settings) is handy on mobile. Everything
   except currency is computed locally; exchange rates are fetched once and
   cached, and currency degrades gracefully offline.
+- **Dataview query** *(requires the [Dataview](https://github.com/blacksmithgu/obsidian-dataview)
+  plugin)* — a card that runs a Dataview query and renders the results through
+  Dataview's own renderers, so tables, lists and task lists look exactly as they
+  do inside a note and refresh live as the vault changes. The card only appears
+  in the **Add card** menu when Dataview is installed and enabled. Paste a
+  **DQL** query (`TABLE` / `LIST` / `TASK`) in the card's settings — the same
+  text you'd put in a ```` ```dataview ```` block — or switch the query type to
+  **DataviewJS** for a ```` ```dataviewjs ```` script (`dv` API in scope; runs
+  arbitrary JavaScript, so only use code you trust). Links in the results are
+  clickable. The card runs with no "current note", so global queries (e.g.
+  `FROM #tag`) work fully; a query relying on `this.file` has no file to resolve
+  to on the dashboard.
 
 ### Live content
 
@@ -235,6 +247,8 @@ toolbar; configure each one from the card itself (title, content, colors, size).
 - Web cards can auto-refresh on an interval.
 - Data-driven cards (tasks, stats, calendar, search, heatmap) redraw on vault
   and metadata changes.
+- Dataview cards refresh through Dataview's own live-updating renderer whenever
+  its index changes.
 
 ## Multiple dashboards
 

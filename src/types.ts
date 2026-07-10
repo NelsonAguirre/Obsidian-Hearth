@@ -15,7 +15,8 @@ export type CardKind =
 	| "stats"
 	| "search"
 	| "heatmap"
-	| "calculator";
+	| "calculator"
+	| "dataview";
 
 /** A single command tile inside a "commands" card. */
 export interface CommandItem {
@@ -207,6 +208,20 @@ export interface CalculatorConfig {
 	lastInput?: string;
 }
 
+/** Per-card configuration for a "dataview" card. Renders a Dataview query
+ * through Dataview's own renderers, so results (tables, lists, task lists) look
+ * exactly as they do inside a note. The card is only offered by the "Add card"
+ * picker when the Dataview community plugin is installed and enabled. */
+export interface DataviewConfig {
+	/** The query text. For "dql" (default) this is a Dataview Query Language
+	 * block (TABLE / LIST / TASK / CALENDAR); for "js" it is DataviewJS code
+	 * with the `dv` API in scope. */
+	query?: string;
+	/** How `query` is interpreted. "dql" (default) runs it as a Dataview query;
+	 * "js" runs it as DataviewJS (arbitrary JavaScript). */
+	language?: "dql" | "js";
+}
+
 /** Per-card configuration for a "clock" card. All fields are optional; omitted
  * fields fall back to the defaults that match the original clock behaviour. */
 export interface ClockConfig {
@@ -307,6 +322,8 @@ export interface DashboardCard {
 	heatmap?: HeatmapConfig;
 	/** kind === "calculator": angle unit, last input and history. */
 	calculator?: CalculatorConfig;
+	/** kind === "dataview": the query text and language. */
+	dataview?: DataviewConfig;
 
 	// ---- Live content ----
 	/** Auto-refresh interval in seconds for live content (embed / web). 0 or
@@ -633,6 +650,7 @@ export function cloneCard(card: DashboardCard): DashboardCard {
 	if (card.heatmap) copy.heatmap = { ...card.heatmap };
 	if (card.clock) copy.clock = { ...card.clock };
 	if (card.calculator) copy.calculator = { ...card.calculator };
+	if (card.dataview) copy.dataview = { ...card.dataview };
 	return copy;
 }
 

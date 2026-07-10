@@ -359,7 +359,9 @@ function renderToolbar(view: HomeView, container: HTMLElement): void {
 		add.addEventListener("click", (evt) => {
 			const menu = new Menu();
 			for (const template of CARD_TEMPLATES) {
-				menu.addItem((item) =>
+					// Skip plugin-gated templates (e.g. Dataview) unless available.
+					if (template.available && !template.available(view.app)) continue;
+					menu.addItem((item) =>
 					item
 						.setTitle(templateName(template))
 						.setIcon(template.icon)
