@@ -797,6 +797,29 @@ export class CardSettingsModal extends Modal {
 				});
 		}
 
+		// TaskNotes source: which status values count as complete. Empty uses the
+		// single global done value (Settings → Hearth); listing values here (e.g.
+		// "done" and "canceled") treats each as complete.
+		if (cfg.source === "tasknotes") {
+			new Setting(containerEl)
+				.setName(t().editors.tasks.doneStatuses)
+				.setDesc(t().editors.tasks.doneStatusesDesc)
+				.addTextArea((ta) => {
+					ta.setValue((cfg.taskNotesDoneStatuses ?? []).join("\n"))
+						.setPlaceholder(t().editors.tasks.doneStatusesPlaceholder)
+						.onChange((v) => {
+							const parsed = v
+								.split("\n")
+								.map((s) => s.trim())
+								.filter(Boolean);
+							cfg.taskNotesDoneStatuses = parsed.length ? parsed : undefined;
+							this.opts.save();
+						});
+					ta.inputEl.rows = 3;
+					ta.inputEl.addClass("hearth-tasks-statuses-input");
+				});
+		}
+
 		// Quick-view on click applies to line-based tasks (checkboxes and Kanban
 		// cards); TaskNotes tasks always open in their own editor.
 		if ((cfg.source ?? "checkbox") !== "tasknotes") {

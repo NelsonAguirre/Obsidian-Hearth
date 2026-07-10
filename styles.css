@@ -2477,8 +2477,9 @@
 	margin-bottom: 6px;
 }
 
-/* Minimalistic, always-visible sort control (list header + Kanban header). */
-.hearth-tasks-sort {
+/* Minimalistic sort & filter controls (list header + Kanban header). */
+.hearth-tasks-sort,
+.hearth-tasks-filter {
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
@@ -2492,11 +2493,13 @@
 	font-weight: 600;
 	cursor: pointer;
 	pointer-events: auto;
-	transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+	transition: opacity 140ms ease, background 140ms ease, color 140ms ease, border-color 140ms ease;
 }
 
 .hearth-tasks-sort:hover,
-.hearth-tasks-sort:focus-visible {
+.hearth-tasks-sort:focus-visible,
+.hearth-tasks-filter:hover,
+.hearth-tasks-filter:focus-visible {
 	background: var(--background-modifier-hover);
 	color: var(--text-normal);
 }
@@ -2505,13 +2508,77 @@
 	color: var(--text-normal);
 }
 
-.hearth-tasks-sort .svg-icon {
+.hearth-tasks-filter.is-active {
+	color: var(--interactive-accent);
+}
+
+.hearth-tasks-sort .svg-icon,
+.hearth-tasks-filter .svg-icon {
 	width: 13px;
 	height: 13px;
 }
 
-.hearth-tasks-sort-label {
+.hearth-tasks-sort-label,
+.hearth-tasks-filter-label {
 	line-height: 1;
+}
+
+/* Like the "new task" button, the list-header sort & filter controls stay
+ * hidden until the card is hovered (or focused), keeping the header quiet. A
+ * set filter or a non-default sort stays visible as an at-a-glance indicator. */
+.hearth-tasks-listhead .hearth-tasks-sort,
+.hearth-tasks-listhead .hearth-tasks-filter {
+	opacity: 0;
+}
+
+.hearth-card:hover .hearth-tasks-listhead .hearth-tasks-sort,
+.hearth-card:hover .hearth-tasks-listhead .hearth-tasks-filter,
+.hearth-tasks-listhead .hearth-tasks-sort:focus-visible,
+.hearth-tasks-listhead .hearth-tasks-filter:focus-visible,
+.hearth-tasks-listhead .hearth-tasks-sort.is-active,
+.hearth-tasks-listhead .hearth-tasks-filter.is-active {
+	opacity: 1;
+}
+
+/* ---- Task filter modal ---------------------------------------------- */
+.hearth-taskfilter-modal h3 {
+	margin: 0 0 12px;
+}
+
+.hearth-taskfilter-presets {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-bottom: 12px;
+	padding-bottom: 12px;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.hearth-taskfilter-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.hearth-taskfilter-chip {
+	padding: 3px 10px;
+	border-radius: 999px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+	color: var(--text-normal);
+	font-size: 0.78rem;
+	cursor: pointer;
+	transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.hearth-taskfilter-chip:hover {
+	background: var(--background-modifier-hover);
+}
+
+.hearth-taskfilter-chip.is-on {
+	background: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+	color: var(--text-on-accent);
 }
 
 /* ---- Activity heatmap card ------------------------------------------ */

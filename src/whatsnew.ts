@@ -25,6 +25,30 @@ export interface ChangelogEntry {
  */
 export const CHANGELOG: ChangelogEntry[] = [
 	{
+		version: "1.7.1.1-beta",
+		tldr:
+			"Tasks-card list polish. The TaskNotes source can now treat several " +
+			"statuses (e.g. done and canceled) as complete, a new Filter control " +
+			"narrows the list by status, priority, due date or text (with one-click " +
+			"presets), and the sort and filter controls now reveal on hover like the " +
+			"add-task button.",
+		features: [
+			"TaskNotes “complete” statuses: choose which status values count as done " +
+				"(one per line in the card's settings) so, e.g., both “done” and " +
+				"“canceled” are treated as complete — hidden unless “Show completed” is on. " +
+				"Empty keeps the single done value from Settings → Hearth.",
+			"List filter: a new Filter control (styled like Sort) opens a modal to narrow " +
+				"the list by status, priority, due date or text, with quick presets " +
+				"(Overdue, Due today, Due this week, High priority, No date). The control " +
+				"shows active while a filter is set.",
+		],
+		fixes: [
+			"The list-header Sort and Filter controls now reveal on card hover, like the " +
+				"add-task button, so the header stays uncluttered — a set filter or a " +
+				"non-default sort stays visible as an indicator.",
+		],
+	},
+	{
 		version: "1.7.0",
 		tldr:
 			"A major Tasks-card release. Hearth now reads and edits Kanban plugin " +

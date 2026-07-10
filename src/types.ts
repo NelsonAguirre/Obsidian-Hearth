@@ -50,6 +50,29 @@ export interface TaskMeta {
 }
 
 /** Per-card configuration for a "tasks" card. */
+/** A coarse priority bucket used by task filters ("none" = no priority set). */
+export type TaskPriorityLevel = "high" | "medium" | "low" | "none";
+
+/** A due-date constraint used by task filters. Compared against each task's
+ * effective date (due, or the next scheduled occurrence for recurring tasks). */
+export type TaskDueFilter = "overdue" | "today" | "week" | "hasDate" | "noDate";
+
+/** A list-layout task filter: only tasks matching every set criterion are
+ * shown. Every field is optional; an empty/absent field imposes no constraint,
+ * so an all-empty filter is inactive and shows everything. */
+export interface TaskFilterConfig {
+	/** Only tasks whose status/column value is in this list (case-insensitive).
+	 * The compared value is the TaskNotes status, the Kanban column, or the
+	 * checkbox state label, whichever the source provides. */
+	statuses?: string[];
+	/** Only tasks at one of these coarse priority levels. */
+	priorities?: TaskPriorityLevel[];
+	/** A due-date constraint (see {@link TaskDueFilter}). */
+	due?: TaskDueFilter;
+	/** Case-insensitive substring the task text must contain. */
+	text?: string;
+}
+
 export interface TasksConfig {
 	/** "checkbox" (default) scans plain Markdown `- [ ]` checkboxes anywhere
 	 * in scope. "tasknotes" reads frontmatter from the TaskNotes community
@@ -113,6 +136,15 @@ export interface TasksConfig {
 	/** How `folders` is applied. "all" (default) scans the whole vault. */
 	folderScope?: "all" | "whitelist" | "blacklist";
 	folders?: string[];
+	/** TaskNotes source: the status values counted as "complete" (case-insensitive).
+	 * When set and non-empty, a task is done when its status is in this list — so,
+	 * e.g., both "done" and "canceled" can be treated as complete. When unset, the
+	 * single global `taskNotesDoneValue` from Settings → Hearth is used. */
+	taskNotesDoneStatuses?: string[];
+	/** List layout: an active filter narrowing which tasks appear. Presets in the
+	 * filter modal are conveniences that fill in these concrete criteria; the
+	 * filter is "active" (and applied) when any field below is set. */
+	taskFilter?: TaskFilterConfig;
 	/** Include already-completed tasks. Default false (hide done). */
 	showCompleted?: boolean;
 	/** Max tasks shown, soonest/overdue due date first. Default 10. */

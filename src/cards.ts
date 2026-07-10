@@ -16,7 +16,17 @@ import {
 } from "obsidian";
 import type { HomeView } from "./view";
 import type { BookmarkItem } from "./obsidian-ext";
-import { ClockConfig, CommandItem, DashboardCard, LinkItem, TaskMeta, TasksConfig } from "./types";
+import {
+	ClockConfig,
+	CommandItem,
+	DashboardCard,
+	LinkItem,
+	TaskDueFilter,
+	TaskFilterConfig,
+	TaskMeta,
+	TaskPriorityLevel,
+	TasksConfig,
+} from "./types";
 import { evaluate as evaluateCalc } from "./calculator";
 import { cachedRates, loadRates } from "./currency";
 import { EXCALIDRAW_PLUGIN_ID, iconForFile, isExcalidraw } from "./filetypes";
@@ -2201,6 +2211,7 @@ function renderTasksListHeader(
 	cfg: TasksConfig,
 	source: string,
 	count: number,
+	availableStatuses: string[],
 	boardColumns: string[] | undefined,
 	container: HTMLElement,
 	refresh: () => void,
@@ -2208,7 +2219,9 @@ function renderTasksListHeader(
 	const head = container.createDiv("hearth-tasks-head hearth-tasks-listhead");
 	head.createSpan({ cls: "hearth-tasks-listhead-count", text: t().cards.tasks.taskCount(count) });
 	const actions = head.createDiv("hearth-tasks-listhead-actions");
-	// Persistent sort control for the whole list.
+	// Filter and sort controls for the whole list. Like the add control, they're
+	// revealed on card hover (see styles.css) so the header stays uncluttered.
+	renderTaskFilterControl(view, actions, cfg, availableStatuses, refresh);
 	renderTaskSortControl(actions, { key: cfg.sortKey, reverse: cfg.sortReverse }, false, (next) => {
 		cfg.sortKey = next.key;
 		cfg.sortReverse = next.reverse;
@@ -2483,6 +2496,238 @@ function renderTaskSortControl(
 	});
 }
 
+// ---- List filter ---------------------------------------------------------
+
+/** The status-like value a task exposes for filtering: the TaskNotes status or
+ * the Kanban column, whichever the source provides (checkbox tasks have neither
+ * and so aren't offered status chips). */
+function hitStatusValue(hit: TaskHit): string | null {
+	return hit.status ?? hit.boardColumn ?? null;
+}
+
+/** The coarse priority bucket of a task for filtering. No priority — or a value
+ * that doesn't map to high/medium/low — counts as "none". */
+function hitPriorityLevel(hit: TaskHit): TaskPriorityLevel {
+	if (!hit.priority || !hit.priority.trim()) return "none";
+	const lvl = priorityLevel(hit.priority);
+	return lvl === "other" ? "none" : lvl;
+}
+
+/** Whether a filter constrains anything. An all-empty filter is inactive and
+ * shows everything, so the control renders as "off" and nothing is filtered. */
+function isTaskFilterActive(f: TaskFilterConfig | undefined): boolean {
+	if (!f) return false;
+	return !!(f.statuses?.length || f.priorities?.length || f.due || (f.text && f.text.trim()));
+}
+
+/** Whether a task satisfies a due-date constraint. Dates compare as YYYY-MM-DD
+ * strings; "week" means due today through seven days out. */
+function taskMatchesDue(hit: TaskHit, due: TaskDueFilter, today: string): boolean {
+	const raw = effectiveDate(hit);
+	const d = raw ? raw.slice(0, 10) : null;
+	switch (due) {
+		case "hasDate":
+			return !!d;
+		case "noDate":
+			return !d;
+		case "overdue":
+			return !!d && d < today && !hit.done;
+		case "today":
+			return d === today;
+		case "week": {
+			if (!d) return false;
+			const end = moment(today).add(7, "day").format("YYYY-MM-DD");
+			return d >= today && d <= end;
+		}
+	}
+	return true;
+}
+
+/** Whether a task passes an active filter: it must satisfy every set criterion
+ * (statuses, priorities, due, text) — unset criteria impose no constraint. */
+function taskMatchesFilter(hit: TaskHit, f: TaskFilterConfig, today: string): boolean {
+	if (f.statuses?.length) {
+		const v = (hitStatusValue(hit) ?? "").trim().toLowerCase();
+		if (!f.statuses.some((s) => s.trim().toLowerCase() === v)) return false;
+	}
+	if (f.priorities?.length && !f.priorities.includes(hitPriorityLevel(hit))) return false;
+	if (f.due && !taskMatchesDue(hit, f.due, today)) return false;
+	if (f.text && f.text.trim()) {
+		const needle = f.text.trim().toLowerCase();
+		if (!(hit.text || hit.file.basename).toLowerCase().includes(needle)) return false;
+	}
+	return true;
+}
+
+/** A filter button styled like the sort control. Shows "active" when the card
+ * carries a filter, and opens a modal to edit it (presets + custom criteria). */
+function renderTaskFilterControl(
+	view: HomeView,
+	parent: HTMLElement,
+	cfg: TasksConfig,
+	availableStatuses: string[],
+	refresh: () => void,
+): void {
+	const btn = parent.createEl("button", {
+		cls: "hearth-tasks-filter",
+		attr: { "aria-label": t().cards.tasks.filter, title: t().cards.tasks.filter },
+	});
+	setIcon(btn, "list-filter");
+	btn.createSpan({ cls: "hearth-tasks-filter-label", text: t().cards.tasks.filter });
+	if (isTaskFilterActive(cfg.taskFilter)) btn.addClass("is-active");
+	btn.addEventListener("click", (e) => {
+		e.stopPropagation();
+		new TaskFilterModal(view.app, cfg.taskFilter ?? {}, availableStatuses, (next) => {
+			cfg.taskFilter = isTaskFilterActive(next) ? next : undefined;
+			void view.plugin.saveData(view.plugin.settings);
+			refresh();
+		}).open();
+	});
+}
+
+/** The order priority chips appear in the filter modal. */
+const TASK_PRIORITY_LEVELS: TaskPriorityLevel[] = ["high", "medium", "low", "none"];
+
+/** The filter modal: quick presets across the top, then editable criteria
+ * (due, priority, status, text). Edits are applied on "Apply"; "Cancel"
+ * discards them and "Clear" empties every field. */
+class TaskFilterModal extends Modal {
+	private working: TaskFilterConfig;
+	private body: HTMLElement | null = null;
+
+	constructor(
+		app: App,
+		initial: TaskFilterConfig,
+		private readonly availableStatuses: string[],
+		private readonly onSubmit: (filter: TaskFilterConfig) => void,
+	) {
+		super(app);
+		// Clone so Cancel truly discards edits.
+		this.working = {
+			statuses: [...(initial.statuses ?? [])],
+			priorities: [...(initial.priorities ?? [])],
+			due: initial.due,
+			text: initial.text,
+		};
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.addClass("hearth-taskfilter-modal");
+		contentEl.createEl("h3", { text: t().cards.tasks.filterTitle });
+		this.renderPresets(contentEl);
+		this.body = contentEl.createDiv("hearth-taskfilter-body");
+		this.renderBody();
+		this.renderFooter(contentEl);
+	}
+
+	/** Preset chips that fill in the criteria below, then re-render the body. */
+	private renderPresets(parent: HTMLElement): void {
+		const labels = t().cards.tasks.filterPresets;
+		const row = parent.createDiv("hearth-taskfilter-presets");
+		const preset = (label: string, apply: () => void) => {
+			const chip = row.createEl("button", { cls: "hearth-taskfilter-chip", text: label });
+			chip.addEventListener("click", () => {
+				apply();
+				this.renderBody();
+			});
+		};
+		preset(labels.overdue, () => (this.working.due = "overdue"));
+		preset(labels.today, () => (this.working.due = "today"));
+		preset(labels.week, () => (this.working.due = "week"));
+		preset(labels.highPriority, () => (this.working.priorities = ["high"]));
+		preset(labels.noDate, () => (this.working.due = "noDate"));
+	}
+
+	/** The editable criteria; rebuilt whenever a preset or toggle changes them. */
+	private renderBody(): void {
+		const body = this.body;
+		if (!body) return;
+		body.empty();
+		const labels = t().cards.tasks;
+
+		// Due-date constraint (a dropdown; "" = any).
+		new Setting(body).setName(labels.filterDue).addDropdown((d) => {
+			d.addOption("", labels.filterDueAny);
+			d.addOption("overdue", labels.filterPresets.overdue);
+			d.addOption("today", labels.filterPresets.today);
+			d.addOption("week", labels.filterPresets.week);
+			d.addOption("hasDate", labels.filterDueHasDate);
+			d.addOption("noDate", labels.filterPresets.noDate);
+			d.setValue(this.working.due ?? "");
+			d.onChange((v) => {
+				this.working.due = v ? (v as TaskDueFilter) : undefined;
+			});
+		});
+
+		// Priority buckets (multi-select chips).
+		const prioRow = new Setting(body).setName(labels.filterPriority);
+		const prioHost = prioRow.controlEl.createDiv("hearth-taskfilter-chips");
+		for (const level of TASK_PRIORITY_LEVELS) {
+			this.toggleChip(prioHost, labels.filterPriorityLevels[level], () => (this.working.priorities ?? []).includes(level), () => {
+				const set = new Set(this.working.priorities ?? []);
+				if (set.has(level)) set.delete(level);
+				else set.add(level);
+				this.working.priorities = set.size ? [...set] : undefined;
+			});
+		}
+
+		// Status/column chips (only when the source exposes statuses).
+		if (this.availableStatuses.length) {
+			const statusRow = new Setting(body).setName(labels.filterStatus);
+			const statusHost = statusRow.controlEl.createDiv("hearth-taskfilter-chips");
+			for (const status of this.availableStatuses) {
+				this.toggleChip(statusHost, status, () => (this.working.statuses ?? []).some((s) => s.toLowerCase() === status.toLowerCase()), () => {
+					const cur = this.working.statuses ?? [];
+					const has = cur.some((s) => s.toLowerCase() === status.toLowerCase());
+					const next = has ? cur.filter((s) => s.toLowerCase() !== status.toLowerCase()) : [...cur, status];
+					this.working.statuses = next.length ? next : undefined;
+				});
+			}
+		}
+
+		// Free-text substring.
+		new Setting(body).setName(labels.filterText).addText((txt) => {
+			txt.setPlaceholder(labels.filterTextPlaceholder).setValue(this.working.text ?? "");
+			txt.onChange((v) => (this.working.text = v.trim() || undefined));
+		});
+	}
+
+	/** A single multi-select chip: reflects `isOn()` and flips it on click. */
+	private toggleChip(host: HTMLElement, label: string, isOn: () => boolean, flip: () => void): void {
+		const chip = host.createEl("button", { cls: "hearth-taskfilter-chip", text: label });
+		chip.toggleClass("is-on", isOn());
+		chip.addEventListener("click", () => {
+			flip();
+			chip.toggleClass("is-on", isOn());
+		});
+	}
+
+	private renderFooter(parent: HTMLElement): void {
+		new Setting(parent)
+			.addButton((b) =>
+				b
+					.setButtonText(t().cards.tasks.filterApply)
+					.setCta()
+					.onClick(() => {
+						this.onSubmit(this.working);
+						this.close();
+					}),
+			)
+			.addButton((b) =>
+				b.setButtonText(t().cards.tasks.filterClear).onClick(() => {
+					this.working = {};
+					this.renderBody();
+				}),
+			)
+			.addButton((b) => b.setButtonText(t().cards.tasks.cancel).onClick(() => this.close()));
+	}
+
+	onClose(): void {
+		this.contentEl.empty();
+	}
+}
+
 async function loadAndRenderTasks(
 	view: HomeView,
 	cfg: TasksConfig,
@@ -2522,22 +2767,40 @@ async function loadAndRenderTasks(
 		return;
 	}
 
-	// List layout: hide completed unless asked, then cap.
+	const today: string = moment().format("YYYY-MM-DD");
+
+	// Distinct status/column values present, offered as filter chips (computed
+	// from all hits so the choices don't shift as the filter narrows the list).
+	const availableStatuses: string[] = [];
+	const seenStatus = new Set<string>();
+	for (const h of hits) {
+		const v = hitStatusValue(h);
+		if (v && !seenStatus.has(v.toLowerCase())) {
+			seenStatus.add(v.toLowerCase());
+			availableStatuses.push(v);
+		}
+	}
+
+	// List layout: hide completed unless asked, apply any active filter, then cap.
 	let list = cfg.showCompleted ? hits : hits.filter((h) => !h.done);
+	if (isTaskFilterActive(cfg.taskFilter)) {
+		const filter = cfg.taskFilter as TaskFilterConfig;
+		list = list.filter((h) => taskMatchesFilter(h, filter, today));
+	}
 	const limit = cfg.count && cfg.count > 0 ? cfg.count : 10;
 	list = list.slice(0, limit);
 
-	// A minimalistic header (count + add control) sits above the list, shown
-	// even when empty so the add control stays reachable.
-	renderTasksListHeader(view, cfg, source, list.length, boardColumns, container, refresh);
+	// A minimalistic header (count + sort/filter/add controls) sits above the
+	// list, shown even when empty so the controls stay reachable.
+	renderTasksListHeader(view, cfg, source, list.length, availableStatuses, boardColumns, container, refresh);
 
 	if (list.length === 0) {
-		emptyState(container, "list-todo", t().cards.empty.tasksEmpty);
+		const empty = isTaskFilterActive(cfg.taskFilter) ? t().cards.empty.tasksNoMatch : t().cards.empty.tasksEmpty;
+		emptyState(container, "list-todo", empty);
 		return;
 	}
 
 	const listEl = container.createDiv("hearth-list hearth-tasks");
-	const today: string = moment().format("YYYY-MM-DD");
 	for (const hit of list) renderTaskRow(view, cfg, listEl, hit, today, refresh);
 }
 
@@ -3511,12 +3774,27 @@ async function collectCheckboxTasks(view: HomeView, cfg: TasksConfig): Promise<T
  * Only files that actually have the configured status field are treated as
  * tasks, so unrelated notes with a `due` or `priority` property aren't
  * mistaken for one. */
+/** Build a predicate deciding whether a TaskNotes status value counts as
+ * complete. If the card lists its own complete statuses (`taskNotesDoneStatuses`,
+ * e.g. "done" + "canceled") those win; otherwise the single global done value
+ * (Settings → Hearth) is used. Comparison is case-insensitive. */
+function doneStatusMatcher(cfg: TasksConfig, globalDoneValue: string): (status: string) => boolean {
+	const custom = (cfg.taskNotesDoneStatuses ?? [])
+		.map((v) => v.trim().toLowerCase())
+		.filter(Boolean);
+	const done = custom.length ? new Set(custom) : new Set([globalDoneValue.trim().toLowerCase() || "done"]);
+	return (status: string) => done.has(status.trim().toLowerCase());
+}
+
 function collectTaskNotesTasks(view: HomeView, cfg: TasksConfig): TaskHit[] {
 	const s = view.plugin.settings;
 	const statusField = s.taskNotesStatusField.trim() || "status";
 	const dueField = s.taskNotesDueField.trim() || "due";
 	const priorityField = s.taskNotesPriorityField.trim() || "priority";
-	const doneValue = (s.taskNotesDoneValue.trim() || "done").toLowerCase();
+	// Which status values count as complete. A per-card list (e.g. "done" +
+	// "canceled") overrides the single global done value; otherwise fall back to
+	// that global value alone.
+	const isDone = doneStatusMatcher(cfg, s.taskNotesDoneValue);
 
 	const files = view.app.vault.getMarkdownFiles().filter((f) => inTaskScope(f.path, cfg));
 	const hits: TaskHit[] = [];
@@ -3558,7 +3836,7 @@ function collectTaskNotesTasks(view: HomeView, cfg: TasksConfig): TaskHit[] {
 			file,
 			line: -1,
 			text: String(fm.title ?? file.basename),
-			done: status.toLowerCase() === doneValue,
+			done: isDone(status),
 			due,
 			dueRaw,
 			scheduled,

@@ -518,6 +518,13 @@ export const en = {
 			kanbanCustomOrder: "Custom column order is set.",
 			showAll: "Show all",
 			resetColumns: "Reset column order, visibility & done columns",
+			doneStatuses: "Statuses counted as complete",
+			doneStatusesDesc:
+				"TaskNotes source: which status values are treated as complete (hidden " +
+				"unless “Show completed” is on, and struck through when shown), one per " +
+				"line. Leave empty to use just the done value from Settings → Hearth. " +
+				"Add, e.g., “canceled” to count cancelled tasks as complete too.",
+			doneStatusesPlaceholder: "done\ncanceled",
 			showCompleted: "Show completed",
 			showCompletedKanbanDesc: "Completed tasks always appear in the Done column on a Kanban board.",
 			maxTasks: "Max tasks shown",
@@ -619,6 +626,7 @@ export const en = {
 			commandsEmpty: "Add commands in card settings",
 			tasksEnable: "Enable the TaskNotes plugin, or switch source to checkboxes",
 			tasksEmpty: "No open tasks",
+			tasksNoMatch: "No tasks match the filter",
 			kanbanNoBoard: "No Kanban board found — pick a board note in card settings, or create one with the Kanban plugin",
 		},
 		embed: {
@@ -715,6 +723,30 @@ export const en = {
 				created: "Date created",
 				alpha: "Alphabetical",
 			},
+			filter: "Filter",
+			filterTitle: "Filter tasks",
+			filterPresets: {
+				overdue: "Overdue",
+				today: "Due today",
+				week: "Due this week",
+				highPriority: "High priority",
+				noDate: "No date",
+			},
+			filterDue: "Due date",
+			filterDueAny: "Any",
+			filterDueHasDate: "Has a date",
+			filterPriority: "Priority",
+			filterPriorityLevels: {
+				high: "High",
+				medium: "Medium",
+				low: "Low",
+				none: "None",
+			},
+			filterStatus: "Status",
+			filterText: "Text contains",
+			filterTextPlaceholder: "Search task text…",
+			filterApply: "Apply",
+			filterClear: "Clear",
 		},
 	},
 
