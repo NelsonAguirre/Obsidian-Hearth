@@ -9,7 +9,8 @@ import {
 	type Dashboard,
 	type DashboardCard,
 	type DataviewConfig,
-	type EmbedView,
+
+
 	type HeatmapConfig,
 	type HomeSettings,
 	type LeafViewConfig,
@@ -22,6 +23,7 @@ import {
 	type TasksConfig,
 	activeDashboard,
 } from "./types";
+import { isEmbeddableBaseViewName } from "./bases";
 import { t } from "./i18n";
 
 /** Current dashboard-layout export schema version. v2 carries every dashboard
@@ -161,6 +163,25 @@ function str(value: unknown): string | undefined {
 	return typeof value === "string" ? value : undefined;
 }
 
+function sanitizeBaseViewName(raw: unknown): string | undefined {
+	if (typeof raw !== "string") return undefined;
+	const name = raw.trim();
+	return isEmbeddableBaseViewName(name) ? name : undefined;
+}
+
+function sanitizeEmbedView(raw: unknown): DashboardCard["secondView"] | undefined {
+	if (!raw || typeof raw !== "object") return undefined;
+	const r = raw as Record<string, unknown>;
+	const target = str(r.target);
+	if (target === undefined) return undefined;
+	const view: NonNullable<DashboardCard["secondView"]> = { target };
+	const baseView = sanitizeBaseViewName(r.baseView);
+	if (baseView !== undefined) view.baseView = baseView;
+	if (typeof r.scale === "number") view.scale = r.scale;
+	if (typeof r.editable === "boolean") view.editable = r.editable;
+	return view;
+}
+
 function sanitizeLink(raw: unknown): LinkItem | null {
 	if (!raw || typeof raw !== "object") return null;
 	const r = raw as Record<string, unknown>;
@@ -218,6 +239,10 @@ function sanitizeCard(raw: unknown, index: number): DashboardCard | null {
 	if (title !== undefined) card.title = title;
 	const target = str(r.target);
 	if (target !== undefined) card.target = target;
+	const baseView = sanitizeBaseViewName(r.baseView);
+	if (baseView !== undefined) card.baseView = baseView;
+	const secondView = sanitizeEmbedView(r.secondView);
+	if (secondView) card.secondView = secondView;
 	const url = str(r.url);
 	if (url !== undefined) card.url = url;
 	const text = str(r.text);
@@ -230,6 +255,7 @@ function sanitizeCard(raw: unknown, index: number): DashboardCard | null {
 	if (typeof r.scale === "number") card.scale = r.scale;
 	if (typeof r.refreshSec === "number") card.refreshSec = r.refreshSec;
 	if (typeof r.editable === "boolean") card.editable = r.editable;
+	if (typeof r.hideBaseHeader === "boolean") card.hideBaseHeader = r.hideBaseHeader;
 	if (typeof r.tileSize === "number") card.tileSize = r.tileSize;
 	if (typeof r.tileAutoFlow === "boolean") card.tileAutoFlow = r.tileAutoFlow;
 	if (typeof r.showOpenButton === "boolean") card.showOpenButton = r.showOpenButton;
@@ -491,15 +517,6 @@ function sanitizeLeafView(r: Record<string, unknown>): LeafViewConfig {
 	const viewType = str(r.viewType);
 	if (viewType !== undefined) cfg.viewType = viewType;
 	return cfg;
-}
-
-function sanitizeEmbedView(r: Record<string, unknown>): EmbedView {
-	const view: EmbedView = {};
-	const target = str(r.target);
-	if (target !== undefined) view.target = target;
-	if (typeof r.scale === "number") view.scale = r.scale;
-	if (typeof r.editable === "boolean") view.editable = r.editable;
-	return view;
 }
 
 function sanitizeBackground(raw: unknown): BackgroundConfig | undefined {
