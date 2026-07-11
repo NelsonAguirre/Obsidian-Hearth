@@ -2555,9 +2555,19 @@
 
 /* Manual column widths (drag-resized): a fixed layout honours the per-column
    <col> widths exactly, so the 32ch auto cap must step aside. */
+.hearth-dataview table.hearth-dv-manual {
+	table-layout: fixed;
+	width: auto;
+}
 .hearth-dataview table.hearth-dv-manual th,
 .hearth-dataview table.hearth-dv-manual td {
 	max-width: none;
+}
+
+/* While a column resize drag is in flight, suppress text selection so dragging
+   the handle doesn't select the table. Toggled on <body> for the drag's life. */
+body.hearth-dv-resizing {
+	user-select: none;
 }
 
 /* Header cells host a drag handle at their right edge. */

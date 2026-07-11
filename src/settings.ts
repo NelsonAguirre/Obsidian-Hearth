@@ -107,7 +107,7 @@ export class HomeSettingTab extends PluginSettingTab {
 
 	/** The currently-selected ribbon tab, defaulting to the first. */
 	private activeTab(): SettingsTabId {
-		const saved = this.app.loadLocalStorage(ACTIVE_TAB_KEY);
+		const saved = this.app.loadLocalStorage(ACTIVE_TAB_KEY) as string | null;
 		return SETTINGS_TABS.some((tab) => tab.id === saved)
 			? (saved as SettingsTabId)
 			: SETTINGS_TABS[0].id;

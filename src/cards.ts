@@ -326,9 +326,9 @@ function decorateDataviewTable(
 	}
 
 	const applyManualLayout = () => {
+		// The .hearth-dv-manual class carries `table-layout: fixed; width: auto`
+		// so the per-column <col> widths below are honoured exactly.
 		table.classList.add("hearth-dv-manual");
-		table.style.tableLayout = "fixed";
-		table.style.width = "auto";
 		dataviewColgroup(table, colCount, widths ?? []);
 	};
 	if (widths) applyManualLayout();
@@ -356,8 +356,12 @@ function decorateDataviewTable(
 			);
 			const startX = e.clientX;
 			const startW = widths[index];
+			// Suppress text selection for the duration of the drag via a body
+			// class (no inline styles). Captured once so a popout window's body
+			// is toggled, not the main document's.
+			const dragDoc = activeDocument;
 			handle.addClass("is-dragging");
-			document.body.style.userSelect = "none";
+			dragDoc.body.addClass("hearth-dv-resizing");
 			const onMove = (ev: PointerEvent) => {
 				const w = Math.max(40, startW + (ev.clientX - startX));
 				widths![index] = w;
@@ -367,7 +371,7 @@ function decorateDataviewTable(
 				window.removeEventListener("pointermove", onMove);
 				window.removeEventListener("pointerup", onUp);
 				handle.removeClass("is-dragging");
-				document.body.style.userSelect = "";
+				dragDoc.body.removeClass("hearth-dv-resizing");
 				cfg.columnWidths = widths ? [...widths] : undefined;
 				persist();
 			};
@@ -4694,12 +4698,10 @@ async function collectKanbanTasks(
 			const linkedFile = soleLinkedNote(view, extended ? text : stripTaskMetadata(rawText), file.path);
 			let completeInstances: string[] | undefined;
 			if (extended && linkedFile) {
-				const fm = view.app.metadataCache.getFileCache(linkedFile)?.frontmatter as
-					| Record<string, unknown>
-					| undefined;
+				const fm = view.app.metadataCache.getFileCache(linkedFile)?.frontmatter;
 				if (fm) {
 					const fmStr = (k: string): string | null => {
-						const v = fm[k];
+						const v: unknown = fm[k];
 						return typeof v === "string" && v.trim() ? v.trim() : null;
 					};
 					if (!due) {
@@ -4715,7 +4717,7 @@ async function collectKanbanTasks(
 					const fmPrio = fmStr("priority");
 					if (!priority && fmPrio) priority = PRIORITY_EMOJI[fmPrio] ?? fmPrio;
 					recurrence = recurrence || fmStr("recurrence") || undefined;
-					const ci = fm["complete_instances"];
+					const ci: unknown = fm["complete_instances"];
 					if (Array.isArray(ci)) completeInstances = ci.map((v) => String(v)).filter(Boolean);
 				}
 			}
