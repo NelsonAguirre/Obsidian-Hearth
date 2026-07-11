@@ -1,14 +1,25 @@
-import { Component, debounce, Menu, setIcon, TAbstractFile } from "obsidian";
+import {
+	Component,
+	debounce,
+	Menu,
+	setIcon,
+	type TAbstractFile,
+} from "obsidian";
 import { confirmAction } from "./ui";
 import { t } from "./i18n";
 import type { HomeView } from "./view";
-import { activeEmbedViewEditable, mountEmbedViewSwitcher, renderCardBody, watchedCardPath } from "./cards";
+import {
+	activeEmbedViewEditable,
+	mountEmbedViewSwitcher,
+	renderCardBody,
+	watchedCardPath,
+} from "./cards";
 import { CARD_TEMPLATES, cardFromTemplate, templateName } from "./templates";
 import { CardSettingsModal } from "./editors";
 import {
 	activeCards,
 	cloneCard,
-	DashboardCard,
+	type DashboardCard,
 	effectiveCardOpacity,
 	effectiveColumns,
 	effectiveFitToPage,
@@ -27,7 +38,7 @@ import {
 	ensureFreeform,
 	ensureLayout,
 	fitVerticalScale,
-	GridLayout,
+	type GridLayout,
 	GRID_GAP,
 	layoutHeight,
 	placeFreeform,
@@ -254,7 +265,13 @@ function watchedCardEditable(card: DashboardCard): boolean {
 
 /** Card kinds whose content is derived from the whole vault and should refresh
  * live on vault/metadata changes. */
-const LIVE_KINDS = new Set<DashboardCard["kind"]>(["tasks", "stats", "calendar", "search", "heatmap"]);
+const LIVE_KINDS = new Set<DashboardCard["kind"]>([
+	"tasks",
+	"stats",
+	"calendar",
+	"search",
+	"heatmap",
+]);
 
 /** Redraw an embed/daily card's body when the file it tracks changes on disk.
  * create/delete/rename always redraw; modify only when `redrawOnModify` (a
@@ -274,18 +291,26 @@ function watchCardFile(
 		return path != null && (file.path === path || oldPath === path);
 	};
 	const { vault } = view.app;
-	parent.registerEvent(vault.on("modify", (file) => {
-		if (redrawOnModify() && affects(file)) redraw();
-	}));
-	parent.registerEvent(vault.on("create", (file) => {
-		if (affects(file)) redraw();
-	}));
-	parent.registerEvent(vault.on("delete", (file) => {
-		if (affects(file)) redraw();
-	}));
-	parent.registerEvent(vault.on("rename", (file, oldPath) => {
-		if (affects(file, oldPath)) redraw();
-	}));
+	parent.registerEvent(
+		vault.on("modify", (file) => {
+			if (redrawOnModify() && affects(file)) redraw();
+		}),
+	);
+	parent.registerEvent(
+		vault.on("create", (file) => {
+			if (affects(file)) redraw();
+		}),
+	);
+	parent.registerEvent(
+		vault.on("delete", (file) => {
+			if (affects(file)) redraw();
+		}),
+	);
+	parent.registerEvent(
+		vault.on("rename", (file, oldPath) => {
+			if (affects(file, oldPath)) redraw();
+		}),
+	);
 }
 
 /** Save the current settings and rebuild the view (used after structural
@@ -337,7 +362,9 @@ function renderCardControls(
 	remove.addEventListener("click", () => {
 		confirmAction(view.app, {
 			title: t().dashboard.removeCardTitle,
-			message: t().dashboard.removeCardMessage(card.title?.trim() || t().dashboard.thisCard),
+			message: t().dashboard.removeCardMessage(
+				card.title?.trim() || t().dashboard.thisCard,
+			),
 			confirmText: t().dashboard.removeCardConfirm,
 			onConfirm: () => {
 				removeCard(view.plugin.settings, card);
@@ -375,8 +402,7 @@ function openCardSettings(view: HomeView, card: DashboardCard): void {
 
 function renderToolbar(view: HomeView, container: HTMLElement): void {
 	const bar = container.createDiv("hearth-toolbar");
-	// At rest the bar holds only the compact Arrange toggle; flag it so CSS can
-	// float it into the gap above the grid instead of reserving a whole row.
+	// Track arrange mode so the toolbar can switch between its compact and full controls.
 	bar.toggleClass("is-arranging", view.arrangeMode);
 
 	if (view.arrangeMode) {
@@ -387,9 +413,9 @@ function renderToolbar(view: HomeView, container: HTMLElement): void {
 		add.addEventListener("click", (evt) => {
 			const menu = new Menu();
 			for (const template of CARD_TEMPLATES) {
-					// Skip plugin-gated templates (e.g. Dataview) unless available.
-					if (template.available && !template.available(view.app)) continue;
-					menu.addItem((item) =>
+				// Skip plugin-gated templates (e.g. Dataview) unless available.
+				if (template.available && !template.available(view.app)) continue;
+				menu.addItem((item) =>
 					item
 						.setTitle(templateName(template))
 						.setIcon(template.icon)
@@ -425,11 +451,15 @@ function renderToolbar(view: HomeView, container: HTMLElement): void {
 		);
 		hideHdr.createSpan({
 			cls: "hearth-tool-label",
-			text: view.hideHeaderInArrange ? t().dashboard.showTitles : t().dashboard.hideTitles,
+			text: view.hideHeaderInArrange
+				? t().dashboard.showTitles
+				: t().dashboard.hideTitles,
 		});
 		hideHdr.setAttribute(
 			"aria-label",
-			view.hideHeaderInArrange ? t().dashboard.showCardHeaders : t().dashboard.hideCardHeaders,
+			view.hideHeaderInArrange
+				? t().dashboard.showCardHeaders
+				: t().dashboard.hideCardHeaders,
 		);
 		hideHdr.addEventListener("click", () => {
 			view.hideHeaderInArrange = !view.hideHeaderInArrange;
@@ -437,14 +467,26 @@ function renderToolbar(view: HomeView, container: HTMLElement): void {
 		});
 	}
 
-	const arrange = bar.createEl("button", { cls: "hearth-tool-btn" });
+	const arrangeZone = bar.createDiv("hearth-arrange-zone");
+	arrangeZone.toggleClass(
+		"is-auto-hide",
+		!view.arrangeMode &&
+			view.plugin.settings.arrangeButtonVisibility === "hover",
+	);
+	const arrange = arrangeZone.createEl("button", { cls: "hearth-tool-btn" });
 	arrange.toggleClass("is-active", view.arrangeMode);
 	// Outside arrange mode keep it as a small, unobtrusive icon button; while
 	// arranging, show the labelled "Done arranging" action.
 	arrange.toggleClass("is-icon", !view.arrangeMode);
-	setIcon(arrange.createSpan("hearth-tool-icon"), view.arrangeMode ? "check" : "move");
+	setIcon(
+		arrange.createSpan("hearth-tool-icon"),
+		view.arrangeMode ? "check" : "move",
+	);
 	if (view.arrangeMode) {
-		arrange.createSpan({ cls: "hearth-tool-label", text: t().dashboard.doneArranging });
+		arrange.createSpan({
+			cls: "hearth-tool-label",
+			text: t().dashboard.doneArranging,
+		});
 	}
 	arrange.setAttribute(
 		"aria-label",

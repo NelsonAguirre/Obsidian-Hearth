@@ -1797,13 +1797,51 @@
 	height: 15px;
 }
 
+.hearth-arrange-zone {
+	display: flex;
+	align-items: center;
+}
+
+.hearth-arrange-zone.is-auto-hide .hearth-tool-btn {
+	opacity: 0;
+	pointer-events: none;
+	transform: translateX(8px);
+}
+
+.hearth-arrange-zone.is-auto-hide:hover .hearth-tool-btn,
+.hearth-arrange-zone.is-auto-hide:focus-within .hearth-tool-btn {
+	opacity: 1;
+	pointer-events: auto;
+	transform: translateX(0);
+}
+
 /* ---- Dashboard switcher (top-left) ---------------------------------- */
+
+.hearth-dash-switcher-zone {
+	display: flex;
+	align-items: center;
+}
 
 .hearth-dash-switcher {
 	display: flex;
 	align-items: center;
 	gap: 6px;
 	margin-bottom: -16px;
+	transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.hearth-dash-switcher-zone.is-auto-hide .hearth-dash-switcher {
+	opacity: 0;
+	pointer-events: none;
+	transform: translateY(-4px);
+}
+
+.hearth-dash-switcher-zone.is-auto-hide:hover .hearth-dash-switcher,
+.hearth-dash-switcher-zone.is-auto-hide:focus-within .hearth-dash-switcher,
+.hearth-dash-switcher-zone.is-auto-hide .hearth-dash-switcher.is-dragging {
+	opacity: 1;
+	pointer-events: auto;
+	transform: translateY(0);
 }
 
 .hearth-dash-btn {

@@ -1,8 +1,8 @@
-import { App, ButtonComponent, Notice, Platform, PluginSettingTab, setIcon, Setting, SliderComponent, TextComponent, TFile } from "obsidian";
+import { type App, type ButtonComponent, Notice, Platform, PluginSettingTab, setIcon, Setting, type SliderComponent, type TextComponent, TFile } from "obsidian";
 import type HearthPlugin from "./main";
 import { FILE_TYPE_GROUPS, fileTypeLabel } from "./filetypes";
 import { CommandPickerModal } from "./pickers";
-import { BackgroundKind, DEFAULT_SETTINGS, defaultMobileActionButtons, HomeSettings, MobileActionButton } from "./types";
+import { type BackgroundKind, DEFAULT_SETTINGS, defaultMobileActionButtons, type HomeSettings, type MobileActionButton } from "./types";
 import { exportLayout, exportSettings, importLayout, importSettings } from "./layout";
 import { confirmAction, downloadTextFile, pickTextFile } from "./ui";
 import { isOmnisearchAvailable, OMNISEARCH_PLUGIN_ID } from "./omnisearch";
@@ -156,6 +156,9 @@ export class HomeSettingTab extends PluginSettingTab {
 				break;
 			case "dashboard":
 				this.section(body, s.sections.grid, s.sections.gridDesc, (b) => this.gridSection(b));
+				this.section(body, s.sections.dashboardControls, s.sections.dashboardControlsDesc, (b) =>
+					this.dashboardControlsSection(b),
+				);
 				this.section(body, s.sections.cardSurface, s.sections.cardSurfaceDesc, (b) =>
 					this.cardSurfaceSection(b),
 				);
@@ -802,6 +805,39 @@ export class HomeSettingTab extends PluginSettingTab {
 					await this.save();
 				}),
 			);
+	}
+
+	// ---- Dashboard: UI controls -----------------------------------------
+
+	private dashboardControlsSection(containerEl: HTMLElement): void {
+		const s = this.plugin.settings;
+		const labels = t().settings.dashboard.visibilityOptions;
+
+		new Setting(containerEl)
+			.setName(t().settings.dashboard.arrangeButtonVisibility)
+			.setDesc(t().settings.dashboard.arrangeButtonVisibilityDesc)
+			.addDropdown((d) => {
+				d.addOption("always", labels.always)
+					.addOption("hover", labels.hover)
+					.setValue(s.arrangeButtonVisibility === "hover" ? "hover" : "always")
+					.onChange(async (v) => {
+						s.arrangeButtonVisibility = v as HomeSettings["arrangeButtonVisibility"];
+						await this.save();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName(t().settings.dashboard.dashboardSwitcherVisibility)
+			.setDesc(t().settings.dashboard.dashboardSwitcherVisibilityDesc)
+			.addDropdown((d) => {
+				d.addOption("always", labels.always)
+					.addOption("hover", labels.hover)
+					.setValue(s.dashboardSwitcherVisibility === "hover" ? "hover" : "always")
+					.onChange(async (v) => {
+						s.dashboardSwitcherVisibility = v as HomeSettings["dashboardSwitcherVisibility"];
+						await this.save();
+					});
+			});
 	}
 
 	// ---- Dashboard: card surface (opacity / blur) -----------------------
