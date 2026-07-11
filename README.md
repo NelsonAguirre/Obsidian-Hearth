@@ -1,5 +1,10 @@
 # Hearth
 
+[![Build](https://img.shields.io/github/actions/workflow/status/ondreu/Hearth/ci.yml?branch=main&label=build)](https://github.com/ondreu/Hearth/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/ondreu/Hearth?sort=semver)](https://github.com/ondreu/Hearth/releases/latest)
+[![Downloads](https://img.shields.io/badge/dynamic/json?logo=obsidian&color=%23483699&url=https%3A%2F%2Fraw.githubusercontent.com%2Fobsidianmd%2Fobsidian-releases%2Fmaster%2Fcommunity-plugin-stats.json&query=%24.hearth.downloads&label=downloads)](https://obsidian.md/plugins?id=hearth)
+[![License](https://img.shields.io/github/license/ondreu/Hearth)](LICENSE)
+
 ![banner](assets/2.png)
 
 A beautiful, customizable **home screen for Obsidian** — search, dashboard, and
@@ -33,6 +38,8 @@ cards: embeds, web pages, tasks, calendars, stats, clocks, launchpads and more.
 - [Settings](#settings)
 - [Keyboard shortcuts](#keyboard-shortcuts)
 - [Development](#development)
+- [Contributing](#contributing)
+- [Support](#support)
 - [Roadmap](#roadmap)
 - [License](#license)
 
@@ -421,6 +428,24 @@ User-facing strings live in [`src/locales/`](src/locales/). English
 load. Adding a language is a matter of copying `en.ts`, translating the values
 (the keys are type-checked against English), and registering the file — see
 [`src/locales/README.md`](src/locales/README.md) for the walkthrough.
+
+## Contributing
+
+Hearth is moving fast, so right now the most valuable contributions are **bug
+reports**, **feature ideas** and **translations** rather than large pull
+requests — a big PR against a fast-moving codebase tends to go stale or collide
+with work in flight. Small, obvious fixes are always welcome; for anything
+larger, please open an issue first. As development slows down I'll be able to
+take PRs far more readily. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full
+story.
+
+## Support
+
+Hearth is free and open source. If it's earned a place on your vault's front
+page and you'd like to support its development, you can buy me a coffee — it's
+genuinely appreciated and helps keep the updates coming.
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/B7K822EW68)
 
 ## Shipped:
 
