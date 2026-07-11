@@ -3,7 +3,7 @@ import type HearthPlugin from "./main";
 import { FILE_TYPE_GROUPS, fileTypeLabel } from "./filetypes";
 import { CommandPickerModal } from "./pickers";
 import { BackgroundKind, DEFAULT_SETTINGS, defaultMobileActionButtons, HomeSettings, MobileActionButton } from "./types";
-import { exportLayout, importLayout } from "./layout";
+import { exportLayout, exportSettings, importLayout, importSettings } from "./layout";
 import { confirmAction } from "./ui";
 import { isOmnisearchAvailable, OMNISEARCH_PLUGIN_ID } from "./omnisearch";
 import { t } from "./i18n";
@@ -889,6 +889,57 @@ export class HomeSettingTab extends PluginSettingTab {
 							void this.save();
 							this.display();
 							new Notice(t().notices.layoutImported);
+						},
+					});
+				});
+			});
+		new Setting(containerEl)
+			.setName(t().settings.layout.exportSettings)
+			.setDesc(t().settings.layout.exportSettingsDesc)
+			.addButton((b) =>
+				b
+					.setButtonText(t().settings.layout.copyJson)
+					.onClick(async () => {
+						try {
+							await navigator.clipboard.writeText(exportSettings(s));
+							new Notice(t().notices.settingsCopied);
+						} catch {
+							new Notice(t().notices.clipboardUnavailable);
+						}
+					}),
+			);
+
+		let pendingSettings = "";
+		new Setting(containerEl)
+			.setName(t().settings.layout.importSettings)
+			.setDesc(t().settings.layout.importSettingsDesc)
+			.addTextArea((txt) => {
+				txt.setPlaceholder(t().settings.layout.importSettingsPlaceholder).onChange(
+					(v) => (pendingSettings = v),
+				);
+				txt.inputEl.rows = 4;
+				txt.inputEl.addClass("hearth-import-input");
+			})
+			.addButton((b) => {
+				b.buttonEl.addClass("hearth-danger-btn");
+				b.setButtonText(t().settings.layout.importButton).onClick(() => {
+					if (!pendingSettings.trim()) {
+						new Notice(t().notices.pasteSettingsFirst);
+						return;
+					}
+					confirmAction(this.app, {
+						title: t().settings.layout.importSettingsTitle,
+						message: t().settings.layout.importSettingsMessage,
+						confirmText: t().settings.layout.importButton,
+						onConfirm: () => {
+							const error = importSettings(s, pendingSettings);
+							if (error) {
+								new Notice(t().notices.layoutImportError(error));
+								return;
+							}
+							void this.save();
+							this.display();
+							new Notice(t().notices.settingsImported);
 						},
 					});
 				});

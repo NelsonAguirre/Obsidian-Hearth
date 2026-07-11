@@ -52,6 +52,9 @@ export const en = {
 		pasteLayoutFirst: "Hearth: paste a layout to import first.",
 		layoutImported: "Hearth: layout imported.",
 		layoutImportError: (error: string) => `Hearth: ${error}`,
+		settingsCopied: "Hearth: settings copied to clipboard.",
+		pasteSettingsFirst: "Hearth: paste a settings backup to import first.",
+		settingsImported: "Hearth: settings imported.",
 		cardCopied: "Card copied to the dashboard.",
 	},
 
@@ -365,8 +368,10 @@ export const en = {
 				"hit Arrange, then use Add card and each card's settings button.",
 		},
 		layout: {
-			heading: "Import / export layout",
-			headingDesc: "Back up or share your dashboard (cards, grid, favorites) as JSON.",
+			heading: "Import / export",
+			headingDesc:
+				"Back up or share your dashboard layout (cards, grid, favorites) — or every " +
+				"Hearth setting — as JSON.",
 			export: "Export layout",
 			exportDesc: "Copy the current dashboard layout to the clipboard.",
 			copyJson: "Copy JSON",
@@ -378,6 +383,19 @@ export const en = {
 			importTitle: "Import layout?",
 			importMessage:
 				"This replaces your current dashboards, pinned cards and layout settings. This can't be undone.",
+			exportSettings: "Export settings",
+			exportSettingsDesc:
+				"Copy every Hearth setting — the full layout plus header, background, " +
+				"behaviour, appearance and TaskNotes options — to the clipboard as a backup.",
+			importSettings: "Import settings",
+			importSettingsDesc:
+				"Paste a previously exported settings backup, then Import. This replaces all " +
+				"your Hearth settings.",
+			importSettingsPlaceholder: '{ "hearthSettings": 1, "dashboards": [ … ] }',
+			importSettingsTitle: "Import settings?",
+			importSettingsMessage:
+				"This replaces all your Hearth settings — dashboards, layout, header, " +
+				"background, behaviour and appearance. This can't be undone.",
 		},
 	},
 
@@ -1010,5 +1028,6 @@ export const en = {
 		noValidDashboards: "Layout contained no valid dashboards.",
 		noValidCards: "Layout contained no valid cards.",
 		notAHearthLayout: 'Not a Hearth layout — no "dashboards" or "cards" array found.',
+		notHearthSettings: 'Not a Hearth settings backup — no "hearthSettings" marker or layout found.',
 	},
 };

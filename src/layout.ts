@@ -8,11 +8,17 @@ import {
 	CommandItem,
 	Dashboard,
 	DashboardCard,
+	DataviewConfig,
+	EmbedView,
 	HeatmapConfig,
 	HomeSettings,
+	LeafViewConfig,
 	LinkItem,
+	MobileActionButton,
 	newDashboardId,
 	SavedSearchConfig,
+	TaskFilterConfig,
+	TaskSortRule,
 	TasksConfig,
 	activeDashboard,
 } from "./types";
@@ -22,6 +28,11 @@ import { t } from "./i18n";
  * (with per-board overrides and backgrounds) plus pinned cards and globals;
  * v1 (a single `cards` array) is still imported for backward compatibility. */
 export const LAYOUT_SCHEMA = 2;
+
+/** Current full-settings export schema version. A settings export is a superset
+ * of a layout export: it embeds the whole layout (so it imports cleanly through
+ * `importLayout` too) plus every other configurable Hearth setting. */
+export const SETTINGS_SCHEMA = 1;
 
 /** The portable subset of settings that describes the whole dashboard setup. */
 export interface LayoutExport {
@@ -44,6 +55,7 @@ const RANGE = {
 	maxWidth: { min: 700, max: 1600 },
 	cardW: { min: 1, max: 16 },
 	cardH: { min: 1, max: 60 },
+	cardBlur: { min: 0, max: 24 },
 };
 
 const CARD_KINDS: CardKind[] = [
@@ -63,11 +75,13 @@ const CARD_KINDS: CardKind[] = [
 	"search",
 	"heatmap",
 	"calculator",
+	"dataview",
+	"leaf",
 ];
 
-/** Serialize the whole dashboard setup to a pretty JSON string. */
-export function exportLayout(s: HomeSettings): string {
-	const data: LayoutExport = {
+/** Build the portable layout payload (the dashboard setup and its globals). */
+function layoutPayload(s: HomeSettings): LayoutExport {
+	return {
 		hearthLayout: LAYOUT_SCHEMA,
 		dashboards: s.dashboards,
 		activeDashboardId: s.activeDashboardId,
@@ -77,6 +91,60 @@ export function exportLayout(s: HomeSettings): string {
 		fitToPage: s.fitToPage,
 		maxWidth: s.maxWidth,
 		favorites: s.favorites,
+	};
+}
+
+/** Serialize the whole dashboard setup to a pretty JSON string. */
+export function exportLayout(s: HomeSettings): string {
+	return JSON.stringify(layoutPayload(s), null, 2);
+}
+
+/** Serialize every configurable Hearth setting — the full layout plus header,
+ * background, behaviour, appearance, filters and TaskNotes field mappings — to a
+ * pretty JSON string. Internal bookkeeping (e.g. `lastSeenVersion`) is omitted
+ * so a shared backup can't rewind another vault's "What's new" state. */
+export function exportSettings(s: HomeSettings): string {
+	const data = {
+		hearthSettings: SETTINGS_SCHEMA,
+		...layoutPayload(s),
+
+		// Header
+		title: s.title,
+		showTitle: s.showTitle,
+		logo: s.logo,
+		searchPlaceholder: s.searchPlaceholder,
+		showNewNoteButton: s.showNewNoteButton,
+		newNoteButtonMode: s.newNoteButtonMode,
+		searchContents: s.searchContents,
+		searchEngine: s.searchEngine,
+
+		// Background
+		backgroundKind: s.backgroundKind,
+		backgroundValue: s.backgroundValue,
+		backgroundOpacity: s.backgroundOpacity,
+		backgroundBlur: s.backgroundBlur,
+
+		// Behaviour
+		openOnStartup: s.openOnStartup,
+		replaceNewTabs: s.replaceNewTabs,
+		mobileSearchOnly: s.mobileSearchOnly,
+		showMobileActionBar: s.showMobileActionBar,
+		mobileActionButtons: s.mobileActionButtons,
+		disableExternalCalls: s.disableExternalCalls,
+
+		// Appearance
+		compact: s.compact,
+		cardOpacity: s.cardOpacity,
+		cardBlur: s.cardBlur,
+
+		// Search filters
+		hiddenFilters: s.hiddenFilters,
+
+		// Tasks / TaskNotes field mappings
+		taskNotesStatusField: s.taskNotesStatusField,
+		taskNotesDueField: s.taskNotesDueField,
+		taskNotesPriorityField: s.taskNotesPriorityField,
+		taskNotesDoneValue: s.taskNotesDoneValue,
 	};
 	return JSON.stringify(data, null, 2);
 }
@@ -165,6 +233,7 @@ function sanitizeCard(raw: unknown, index: number): DashboardCard | null {
 	if (typeof r.tileSize === "number") card.tileSize = r.tileSize;
 	if (typeof r.tileAutoFlow === "boolean") card.tileAutoFlow = r.tileAutoFlow;
 	if (typeof r.showOpenButton === "boolean") card.showOpenButton = r.showOpenButton;
+	if (typeof r.hideBaseHeader === "boolean") card.hideBaseHeader = r.hideBaseHeader;
 	if (typeof r.sandboxTrusted === "boolean") card.sandboxTrusted = r.sandboxTrusted;
 	if (typeof r.pinned === "boolean") card.pinned = r.pinned;
 	if (typeof r.cardOpacity === "number") card.cardOpacity = r.cardOpacity;
@@ -194,6 +263,15 @@ function sanitizeCard(raw: unknown, index: number): DashboardCard | null {
 	}
 	if (r.calculator && typeof r.calculator === "object") {
 		card.calculator = sanitizeCalculator(r.calculator as Record<string, unknown>);
+	}
+	if (r.dataview && typeof r.dataview === "object") {
+		card.dataview = sanitizeDataview(r.dataview as Record<string, unknown>);
+	}
+	if (r.leafView && typeof r.leafView === "object") {
+		card.leafView = sanitizeLeafView(r.leafView as Record<string, unknown>);
+	}
+	if (r.secondView && typeof r.secondView === "object") {
+		card.secondView = sanitizeEmbedView(r.secondView as Record<string, unknown>);
 	}
 
 	return card;
@@ -231,24 +309,132 @@ function sanitizeClock(r: Record<string, unknown>): ClockConfig {
 	return clock;
 }
 
+/** Keep only the strings from an unknown array (dropping non-strings). */
+function strArray(value: unknown): string[] | undefined {
+	if (!Array.isArray(value)) return undefined;
+	return value.filter((v): v is string => typeof v === "string");
+}
+
+const TASK_SORT_KEYS = ["smart", "due", "priority", "created", "alpha"] as const;
+const TASK_SORT_FIELDS = ["due", "scheduled", "priority", "created", "alpha", "status"] as const;
+const TASK_PRIORITY_LEVELS = ["high", "medium", "low", "none"] as const;
+const TASK_DUE_FILTERS = ["overdue", "today", "week", "hasDate", "noDate"] as const;
+
+function sanitizeCheckboxStatuses(
+	value: unknown,
+): NonNullable<TasksConfig["checkboxStatuses"]> | undefined {
+	if (!Array.isArray(value)) return undefined;
+	const out = value
+		.map((raw): { symbol: string; label: string; done?: boolean } | null => {
+			if (!raw || typeof raw !== "object") return null;
+			const r = raw as Record<string, unknown>;
+			const symbol = str(r.symbol);
+			const label = str(r.label);
+			if (symbol === undefined || label === undefined) return null;
+			const st: { symbol: string; label: string; done?: boolean } = { symbol, label };
+			if (typeof r.done === "boolean") st.done = r.done;
+			return st;
+		})
+		.filter((s): s is { symbol: string; label: string; done?: boolean } => s !== null);
+	return out;
+}
+
+function sanitizeSortRules(value: unknown): TaskSortRule[] | undefined {
+	if (!Array.isArray(value)) return undefined;
+	return value
+		.map((raw): TaskSortRule | null => {
+			if (!raw || typeof raw !== "object") return null;
+			const r = raw as Record<string, unknown>;
+			if (!TASK_SORT_FIELDS.includes(r.field as (typeof TASK_SORT_FIELDS)[number])) return null;
+			const rule: TaskSortRule = { field: r.field as TaskSortRule["field"] };
+			if (typeof r.reverse === "boolean") rule.reverse = r.reverse;
+			return rule;
+		})
+		.filter((rule): rule is TaskSortRule => rule !== null);
+}
+
+function sanitizeKanbanColumnSort(
+	value: unknown,
+): NonNullable<TasksConfig["kanbanColumnSort"]> | undefined {
+	if (!value || typeof value !== "object") return undefined;
+	const out: NonNullable<TasksConfig["kanbanColumnSort"]> = {};
+	for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+		if (!raw || typeof raw !== "object") continue;
+		const r = raw as Record<string, unknown>;
+		const entry: { key?: (typeof TASK_SORT_KEYS)[number]; reverse?: boolean } = {};
+		if (TASK_SORT_KEYS.includes(r.key as (typeof TASK_SORT_KEYS)[number])) {
+			entry.key = r.key as (typeof TASK_SORT_KEYS)[number];
+		}
+		if (typeof r.reverse === "boolean") entry.reverse = r.reverse;
+		out[key] = entry;
+	}
+	return out;
+}
+
+function sanitizeTaskFilter(value: unknown): TaskFilterConfig | undefined {
+	if (!value || typeof value !== "object") return undefined;
+	const r = value as Record<string, unknown>;
+	const cfg: TaskFilterConfig = {};
+	const statuses = strArray(r.statuses);
+	if (statuses) cfg.statuses = statuses;
+	if (Array.isArray(r.priorities)) {
+		cfg.priorities = r.priorities.filter(
+			(p): p is (typeof TASK_PRIORITY_LEVELS)[number] =>
+				TASK_PRIORITY_LEVELS.includes(p as (typeof TASK_PRIORITY_LEVELS)[number]),
+		);
+	}
+	if (TASK_DUE_FILTERS.includes(r.due as (typeof TASK_DUE_FILTERS)[number])) {
+		cfg.due = r.due as TaskFilterConfig["due"];
+	}
+	const text = str(r.text);
+	if (text !== undefined) cfg.text = text;
+	return cfg;
+}
+
 function sanitizeTasks(r: Record<string, unknown>): TasksConfig {
 	const cfg: TasksConfig = {};
-	if (r.source === "checkbox" || r.source === "tasknotes") cfg.source = r.source;
+	if (r.source === "checkbox" || r.source === "tasknotes" || r.source === "kanban") {
+		cfg.source = r.source;
+	}
+	const kanbanFile = str(r.kanbanFile);
+	if (kanbanFile !== undefined) cfg.kanbanFile = kanbanFile;
+	if (typeof r.kanbanExtended === "boolean") cfg.kanbanExtended = r.kanbanExtended;
+	if (typeof r.checkboxExtended === "boolean") cfg.checkboxExtended = r.checkboxExtended;
+	if (typeof r.taskQuickView === "boolean") cfg.taskQuickView = r.taskQuickView;
+	const convertNoteTemplate = str(r.convertNoteTemplate);
+	if (convertNoteTemplate !== undefined) cfg.convertNoteTemplate = convertNoteTemplate;
+	if (typeof r.convertMetadataToFrontmatter === "boolean") {
+		cfg.convertMetadataToFrontmatter = r.convertMetadataToFrontmatter;
+	}
+	if (typeof r.newTaskAsNote === "boolean") cfg.newTaskAsNote = r.newTaskAsNote;
+	const checkboxStatuses = sanitizeCheckboxStatuses(r.checkboxStatuses);
+	if (checkboxStatuses) cfg.checkboxStatuses = checkboxStatuses;
+	if (TASK_SORT_KEYS.includes(r.sortKey as (typeof TASK_SORT_KEYS)[number])) {
+		cfg.sortKey = r.sortKey as TasksConfig["sortKey"];
+	}
+	if (typeof r.sortReverse === "boolean") cfg.sortReverse = r.sortReverse;
+	const sortRules = sanitizeSortRules(r.sortRules);
+	if (sortRules) cfg.sortRules = sortRules;
+	const kanbanColumnSort = sanitizeKanbanColumnSort(r.kanbanColumnSort);
+	if (kanbanColumnSort) cfg.kanbanColumnSort = kanbanColumnSort;
 	if (r.folderScope === "all" || r.folderScope === "whitelist" || r.folderScope === "blacklist") {
 		cfg.folderScope = r.folderScope;
 	}
-	if (Array.isArray(r.folders)) {
-		cfg.folders = r.folders.filter((f): f is string => typeof f === "string");
-	}
+	const folders = strArray(r.folders);
+	if (folders) cfg.folders = folders;
+	const taskNotesDoneStatuses = strArray(r.taskNotesDoneStatuses);
+	if (taskNotesDoneStatuses) cfg.taskNotesDoneStatuses = taskNotesDoneStatuses;
+	const taskFilter = sanitizeTaskFilter(r.taskFilter);
+	if (taskFilter) cfg.taskFilter = taskFilter;
 	if (typeof r.showCompleted === "boolean") cfg.showCompleted = r.showCompleted;
 	if (typeof r.count === "number") cfg.count = r.count;
 	if (r.layout === "list" || r.layout === "kanban") cfg.layout = r.layout;
-	if (Array.isArray(r.kanbanOrder)) {
-		cfg.kanbanOrder = r.kanbanOrder.filter((k): k is string => typeof k === "string");
-	}
-	if (Array.isArray(r.kanbanHidden)) {
-		cfg.kanbanHidden = r.kanbanHidden.filter((k): k is string => typeof k === "string");
-	}
+	const kanbanOrder = strArray(r.kanbanOrder);
+	if (kanbanOrder) cfg.kanbanOrder = kanbanOrder;
+	const kanbanHidden = strArray(r.kanbanHidden);
+	if (kanbanHidden) cfg.kanbanHidden = kanbanHidden;
+	const kanbanDoneColumns = strArray(r.kanbanDoneColumns);
+	if (kanbanDoneColumns) cfg.kanbanDoneColumns = kanbanDoneColumns;
 	return cfg;
 }
 
@@ -285,6 +471,35 @@ function sanitizeCalculator(r: Record<string, unknown>): CalculatorConfig {
 	const lastInput = str(r.lastInput);
 	if (lastInput !== undefined) cfg.lastInput = lastInput;
 	return cfg;
+}
+
+function sanitizeDataview(r: Record<string, unknown>): DataviewConfig {
+	const cfg: DataviewConfig = {};
+	const query = str(r.query);
+	if (query !== undefined) cfg.query = query;
+	if (r.language === "dql" || r.language === "js") cfg.language = r.language;
+	if (Array.isArray(r.columnWidths)) {
+		cfg.columnWidths = r.columnWidths.filter(
+			(w): w is number => typeof w === "number" && Number.isFinite(w),
+		);
+	}
+	return cfg;
+}
+
+function sanitizeLeafView(r: Record<string, unknown>): LeafViewConfig {
+	const cfg: LeafViewConfig = {};
+	const viewType = str(r.viewType);
+	if (viewType !== undefined) cfg.viewType = viewType;
+	return cfg;
+}
+
+function sanitizeEmbedView(r: Record<string, unknown>): EmbedView {
+	const view: EmbedView = {};
+	const target = str(r.target);
+	if (target !== undefined) view.target = target;
+	if (typeof r.scale === "number") view.scale = r.scale;
+	if (typeof r.editable === "boolean") view.editable = r.editable;
+	return view;
 }
 
 function sanitizeBackground(raw: unknown): BackgroundConfig | undefined {
@@ -325,6 +540,12 @@ function sanitizeDashboard(raw: unknown, s: HomeSettings, index: number): Dashbo
 	if (typeof r.maxWidth === "number") {
 		dash.maxWidth = clampNum(r.maxWidth, RANGE.maxWidth.min, RANGE.maxWidth.max, s.maxWidth);
 	}
+	if (typeof r.cardOpacity === "number") {
+		dash.cardOpacity = Math.max(0, Math.min(1, r.cardOpacity));
+	}
+	if (typeof r.cardBlur === "number") {
+		dash.cardBlur = clampNum(r.cardBlur, RANGE.cardBlur.min, RANGE.cardBlur.max, s.cardBlur);
+	}
 	const bg = sanitizeBackground(r.background);
 	if (bg) dash.background = bg;
 	return dash;
@@ -345,8 +566,13 @@ export function importLayout(s: HomeSettings, json: string): string | null {
 	if (!parsed || typeof parsed !== "object") {
 		return t().layout.notAnObject;
 	}
-	const data = parsed as Record<string, unknown>;
+	return applyLayout(s, parsed as Record<string, unknown>);
+}
 
+/** Apply the dashboard/layout portion of a parsed export onto `s`. Returns an
+ * error message on failure, or null on success. Supports the v2 multi-dashboard
+ * format and the legacy v1 single-`cards` format. */
+function applyLayout(s: HomeSettings, data: Record<string, unknown>): string | null {
 	// v2: a full multi-dashboard layout.
 	if (Array.isArray(data.dashboards)) {
 		const dashboards = data.dashboards
@@ -380,6 +606,40 @@ export function importLayout(s: HomeSettings, json: string): string | null {
 	return t().layout.notAHearthLayout;
 }
 
+/**
+ * Parse and apply a full settings export produced by {@link exportSettings}.
+ * Returns an error message on failure, or null on success. A settings export
+ * embeds the whole layout, so the dashboard portion is applied through the same
+ * sanitizers as {@link importLayout}; every other setting is validated field by
+ * field so a malformed/hostile backup can never write values the UI couldn't.
+ */
+export function importSettings(s: HomeSettings, json: string): string | null {
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(json);
+	} catch {
+		return t().layout.invalidJson;
+	}
+	if (!parsed || typeof parsed !== "object") {
+		return t().layout.notAnObject;
+	}
+	const data = parsed as Record<string, unknown>;
+
+	const hasLayout = Array.isArray(data.dashboards) || Array.isArray(data.cards);
+	if (!hasLayout && typeof data.hearthSettings !== "number") {
+		return t().layout.notHearthSettings;
+	}
+
+	// Apply the embedded layout first so any malformed dashboards abort before we
+	// touch the rest of the settings, keeping the import all-or-nothing.
+	if (hasLayout) {
+		const err = applyLayout(s, data);
+		if (err) return err;
+	}
+	applySettings(s, data);
+	return null;
+}
+
 /** Apply the global (non-per-board) settings carried by a layout, clamped. */
 function applyGlobals(s: HomeSettings, data: Record<string, unknown>): void {
 	s.gridColumns = clampNum(data.gridColumns, RANGE.gridColumns.min, RANGE.gridColumns.max, s.gridColumns);
@@ -391,4 +651,93 @@ function applyGlobals(s: HomeSettings, data: Record<string, unknown>): void {
 	if (Array.isArray(data.favorites)) {
 		s.favorites = data.favorites.filter((p): p is string => typeof p === "string");
 	}
+}
+
+function sanitizeMobileActionButton(raw: unknown): MobileActionButton | null {
+	if (!raw || typeof raw !== "object") return null;
+	const r = raw as Record<string, unknown>;
+	const id = str(r.id);
+	if (!id) return null;
+	const btn: MobileActionButton = {
+		id,
+		label: str(r.label) ?? "",
+		icon: str(r.icon) ?? "",
+	};
+	if (r.type === "command" || r.type === "note" || r.type === "url") btn.type = r.type;
+	const target = str(r.target);
+	if (target !== undefined) btn.target = target;
+	const commandId = str(r.commandId);
+	if (commandId !== undefined) btn.commandId = commandId;
+	return btn;
+}
+
+/** Apply the non-layout settings carried by a full settings export, each field
+ * validated/clamped so an untrusted backup can only set values the UI could. */
+function applySettings(s: HomeSettings, data: Record<string, unknown>): void {
+	// Header
+	const title = str(data.title);
+	if (title !== undefined) s.title = title;
+	if (typeof data.showTitle === "boolean") s.showTitle = data.showTitle;
+	const logo = str(data.logo);
+	if (logo !== undefined) s.logo = logo;
+	const searchPlaceholder = str(data.searchPlaceholder);
+	if (searchPlaceholder !== undefined) s.searchPlaceholder = searchPlaceholder;
+	if (typeof data.showNewNoteButton === "boolean") s.showNewNoteButton = data.showNewNoteButton;
+	if (data.newNoteButtonMode === "newNote" || data.newNoteButtonMode === "searchOnline") {
+		s.newNoteButtonMode = data.newNoteButtonMode;
+	}
+	if (typeof data.searchContents === "boolean") s.searchContents = data.searchContents;
+	if (data.searchEngine === "builtin" || data.searchEngine === "omnisearch") {
+		s.searchEngine = data.searchEngine;
+	}
+
+	// Background
+	const bgKinds: BackgroundKind[] = ["none", "default", "color", "image", "url"];
+	if (bgKinds.includes(data.backgroundKind as BackgroundKind)) {
+		s.backgroundKind = data.backgroundKind as BackgroundKind;
+	}
+	const backgroundValue = str(data.backgroundValue);
+	if (backgroundValue !== undefined) s.backgroundValue = backgroundValue;
+	if (typeof data.backgroundOpacity === "number") {
+		s.backgroundOpacity = Math.max(0, Math.min(1, data.backgroundOpacity));
+	}
+	if (typeof data.backgroundBlur === "number") {
+		s.backgroundBlur = Math.max(0, Math.min(40, data.backgroundBlur));
+	}
+
+	// Behaviour
+	if (typeof data.openOnStartup === "boolean") s.openOnStartup = data.openOnStartup;
+	if (typeof data.replaceNewTabs === "boolean") s.replaceNewTabs = data.replaceNewTabs;
+	if (typeof data.mobileSearchOnly === "boolean") s.mobileSearchOnly = data.mobileSearchOnly;
+	if (typeof data.showMobileActionBar === "boolean") s.showMobileActionBar = data.showMobileActionBar;
+	if (Array.isArray(data.mobileActionButtons)) {
+		s.mobileActionButtons = data.mobileActionButtons
+			.map(sanitizeMobileActionButton)
+			.filter((b): b is MobileActionButton => b !== null);
+	}
+	if (typeof data.disableExternalCalls === "boolean") s.disableExternalCalls = data.disableExternalCalls;
+
+	// Appearance
+	if (typeof data.compact === "boolean") s.compact = data.compact;
+	if (typeof data.cardOpacity === "number") {
+		s.cardOpacity = Math.max(0, Math.min(1, data.cardOpacity));
+	}
+	if (typeof data.cardBlur === "number") {
+		s.cardBlur = clampNum(data.cardBlur, RANGE.cardBlur.min, RANGE.cardBlur.max, s.cardBlur);
+	}
+
+	// Search filters
+	if (Array.isArray(data.hiddenFilters)) {
+		s.hiddenFilters = data.hiddenFilters.filter((f): f is string => typeof f === "string");
+	}
+
+	// Tasks / TaskNotes field mappings
+	const statusField = str(data.taskNotesStatusField);
+	if (statusField !== undefined) s.taskNotesStatusField = statusField;
+	const dueField = str(data.taskNotesDueField);
+	if (dueField !== undefined) s.taskNotesDueField = dueField;
+	const priorityField = str(data.taskNotesPriorityField);
+	if (priorityField !== undefined) s.taskNotesPriorityField = priorityField;
+	const doneValue = str(data.taskNotesDoneValue);
+	if (doneValue !== undefined) s.taskNotesDoneValue = doneValue;
 }

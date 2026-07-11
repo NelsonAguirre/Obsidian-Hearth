@@ -27,6 +27,32 @@ export interface ChangelogEntry {
  */
 export const CHANGELOG: ChangelogEntry[] = [
 	{
+		version: "1.8.1.2-beta",
+		tldr:
+			"Back up every Hearth setting — not just the layout — as JSON, and a fix " +
+			"so importing a layout no longer quietly drops newer cards and options.",
+		features: [
+			"Export / import settings: a new pair of buttons in Backup (Import / " +
+				"export) that copy every configurable Hearth setting to the clipboard as " +
+				"JSON and restore them on another vault — the full dashboard layout plus " +
+				"header, background, behaviour, appearance, search filters and the " +
+				"TaskNotes field mappings. It's a superset of the existing layout export " +
+				"(which is unchanged), so a settings backup also imports cleanly through " +
+				"Import layout. Internal bookkeeping (like the \"What's new\" state) is " +
+				"left out so a shared backup can't rewind another vault.",
+		],
+		fixes: [
+			"Import layout no longer loses parts of a layout. Dataview and Plugin-view " +
+				"(leaf) cards were dropped entirely on import, and several card options — " +
+				"an embed's second view and \"hide base header\", and most Tasks-card " +
+				"settings (Kanban source and file, sort rules, filters, per-column sort, " +
+				"custom checkbox states, convert-to-note options and more) — silently " +
+				"vanished, as did per-dashboard card opacity/blur overrides. Import now " +
+				"carries every field the layout holds, so a shared or synced layout " +
+				"round-trips faithfully.",
+		],
+	},
+	{
 		version: "1.8.1.1-beta",
 		tldr:
 			"A privacy toggle to switch off Hearth's only network request, plus a " +
