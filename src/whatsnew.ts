@@ -21,9 +21,84 @@ export interface ChangelogEntry {
  * the release being cut, so the top entry is what a freshly-updated user sees.
  *
  * The 1.7.0 entry aggregates the whole 1.6.8 beta series (everything since the
- * previous stable, 1.6.7). Future stable/beta releases prepend their own entry.
+ * previous stable, 1.6.7), and the 1.8.0 entry aggregates the whole 1.7.1 beta
+ * series (everything since 1.7.0). Future stable/beta releases prepend their
+ * own entry.
  */
 export const CHANGELOG: ChangelogEntry[] = [
+	{
+		version: "1.8.0",
+		tldr:
+			"A big cards-and-appearance release aggregating the whole 1.7.1 beta " +
+			"series. Two new cards: a Dataview card that renders DQL/DataviewJS " +
+			"through Dataview's own renderers, and a beta Plugin view card that hosts " +
+			"any plugin's (or a core) side-panel view right on the dashboard. Cards " +
+			"gain frosted glass (backdrop blur) — now the default look — the settings " +
+			"tab is reorganized into a category ribbon with an About tab, embed cards " +
+			"can carry a second view and hide a base's header, and the Tasks card " +
+			"grows a list filter and a custom multi-rule sort.",
+		features: [
+			"Dataview card (requires the Dataview plugin): a card that runs a Dataview " +
+				"query and renders the results through Dataview's own renderers, so " +
+				"tables, lists and task lists look exactly as they do in a note and " +
+				"refresh live. Paste a DQL query (TABLE / LIST / TASK) or switch to " +
+				"DataviewJS; links in the results are clickable, and table columns " +
+				"auto-fit their content (scrolling sideways when wider than the card) " +
+				"with a drag-to-resize handle on each column header that's remembered " +
+				"per card. Only offered in Add card when Dataview is installed.",
+			"Plugin view card (beta): a new card kind that hosts another plugin's — or " +
+				"a core — registered side-panel view (calendar, outline, tag pane, " +
+				"kanban…) inside a dashboard card. Pick from the views your enabled " +
+				"plugins provide; the card hosts a detached workspace leaf, so it never " +
+				"appears in your saved layout or disturbs other panes, cleans itself up " +
+				"on redraw and dashboard close, honours card opacity/blur, and shows a " +
+				"friendly prompt when the view's plugin is disabled. Some views expect a " +
+				"real sidebar and may size oddly — hence beta.",
+			"Card blur (frosted glass): a backdrop blur behind translucent cards, set " +
+				"at every level card opacity already had — a global default (Settings → " +
+				"Dashboard), a per-dashboard override, and a per-card slider in the " +
+				"card's Colors section. Frosted-glass cards are now the default look for " +
+				"fresh installs (card opacity 0.50, card blur 7, over a lighter " +
+				"background blur); existing vaults keep their settings until a slider is " +
+				"reset (↺). Merged cards blur on one shared layer, so a group of " +
+				"touching cards reads as a single seamless sheet with no seam at the join.",
+			"Settings, reorganized: the plugin settings tab now opens on a category " +
+				"ribbon (Appearance · Search · Dashboard · Behaviour · Integrations · " +
+				"Backup · About) — click one to see just that group's sections instead " +
+				"of scrolling one long list — with settings regrouped under the right " +
+				"heading, every setting carrying a description, and more fields carrying " +
+				"a reset (↺) button. A new About tab holds links to the GitHub repo and " +
+				"issue tracker, a low-key Ko-fi tip button, and the running version.",
+			"Embed second view: give an embed card a second file to embed (with its own " +
+				"zoom and editable options) and it grows a switcher to flip between the " +
+				"two — in the header when the card has a title, or as a floating, " +
+				"hover-only control when it's headerless.",
+			"Hide base header: a per-card toggle (for embed cards showing a .base file) " +
+				"that hides the Bases view's own toolbar so the card shows only the " +
+				"results.",
+			"Tasks list filter: a new Filter control opens a modal to narrow the list " +
+				"by status, priority, due date or text, with quick presets (Overdue, Due " +
+				"today, Due this week, High priority, No date).",
+			"Custom task sort: the list sort control offers “Custom sort…”, a modal to " +
+				"build an ordered list of rules (each a field + direction) applied in " +
+				"sequence — the first is the primary sort and each next one breaks ties. " +
+				"On a Kanban board it's the fallback for any column without its own sort.",
+			"TaskNotes “complete” statuses: choose which status values count as done " +
+				"(one per line), so e.g. both “done” and “canceled” are treated as " +
+				"complete.",
+		],
+		fixes: [
+			"Embed zoom now uses the CSS `zoom` property (reflow) instead of " +
+				"`transform: scale()`, so a zoomed embed fits its card exactly instead of " +
+				"leaving an empty strip below it or clipping its bottom.",
+			"“Hide base header” hides the whole Bases header wrapper, so no empty gap is " +
+				"left where the toolbar was.",
+			"The Tasks card's list-mode task-count header no longer renders broken.",
+			"The list-header Sort and Filter controls reveal on card hover (like the " +
+				"add-task button), so the header stays uncluttered — a set filter or a " +
+				"non-default sort stays visible as an indicator.",
+		],
+	},
 	{
 		version: "1.7.1.14-beta",
 		tldr:

@@ -255,6 +255,15 @@ toolbar; configure each one from the card itself (title, content, colors, size).
   refreshes). The card runs with no "current note", so global queries (e.g.
   `FROM #tag`) work fully; a query relying on `this.file` has no file to resolve
   to on the dashboard.
+- **Plugin view** *(beta)* — host another plugin's — or a core — registered
+  **side-panel view** (calendar, outline, tag pane, a Kanban board view…)
+  right inside a dashboard card. Pick from the views your enabled plugins and
+  Obsidian's core panes provide; the card hosts a **detached workspace leaf**,
+  so it never shows up in your saved layout or disturbs your other panes, and it
+  cleans itself up when the card redraws or the dashboard closes. It honours the
+  card's opacity and blur (frosted glass) like every other card, and shows a
+  friendly prompt when the chosen view's plugin is disabled. Some views expect a
+  real sidebar and may size oddly on a wide card — hence beta.
 
 ### Live content
 
@@ -299,6 +308,15 @@ toolbar; configure each one from the card itself (title, content, colors, size).
 - **Per-card opacity** — a global **Card opacity** slider tints card surfaces
   so the dashboard background shows through without dimming content. Opacity
   cascades: global → per-dashboard → per-card override.
+- **Card blur (frosted glass)** — a backdrop blur behind translucent cards, set
+  at the same three levels as opacity: a global **Card blur** default
+  (Settings → Dashboard), a per-dashboard override, and a per-card slider in the
+  card's **Colors** section. It blurs only the dashboard behind the card, leaving
+  the card's content sharp. Cards snapped together blur on **one shared layer**,
+  so a merged group reads as a single seamless sheet of glass with no seam at
+  the join. Frosted-glass cards are the **default look** for fresh installs
+  (card opacity 0.50, card blur 7, over a lighter background blur); existing
+  vaults keep their settings until a slider is reset (↺).
 - **Ambient default background** — out of the box Hearth ships with a soft
   ambient background (low opacity + blur) that sits behind cards without
   competing with content. Replace it with a solid color, a vault image, or an
@@ -325,6 +343,9 @@ toolbar; configure each one from the card itself (title, content, colors, size).
   usable area.
 - **Card opacity** — make card surfaces translucent so the dashboard background
   shows through; content stays fully legible.
+- **Card blur (frosted glass)** — blur the dashboard behind translucent cards
+  for a frosted-glass look, at global, per-dashboard and per-card levels. On by
+  default for fresh installs; merged cards blur as one seamless surface.
 
 ## Mobile
 
@@ -341,21 +362,27 @@ toolbar; configure each one from the card itself (title, content, colors, size).
 
 ## Settings
 
-Everything lives under **Settings → Hearth**:
+Everything lives under **Settings → Hearth**, organised into a **category
+ribbon** pinned at the top — click a tab to see just that group's sections
+instead of scrolling one long list. Every setting carries a description, and
+many fields have a reset (↺) button back to their default.
 
-- **Header** — title, logo, search placeholder, new-note button, full-text
-  search.
-- **Background** — kind (none/color/image/URL), opacity, blur.
+- **Appearance** — title, logo, background (none/color/image/URL, opacity,
+  blur), compact spacing.
+- **Search** — search placeholder, full-text search, new-note button, search
+  engine (built-in / Omnisearch), file-type filters.
+- **Dashboard** — fit to page, columns, row height, max width, card opacity,
+  **card blur** (frosted glass).
 - **Behaviour** — open on startup, replace empty new tabs, mobile search-only,
   mobile action bar.
-- **Dashboard** — fit to page, compact spacing, card opacity, columns, row
-  height, max width.
-- **Tasks / TaskNotes** — frontmatter field names and the status value that
-  counts as "done".
-- **Layout import / export** — back up or share the current dashboard as JSON.
+- **Integrations** — Tasks / TaskNotes frontmatter field names and the status
+  value(s) that count as "done".
+- **Backup** — import / export the current dashboard's layout as JSON.
+- **About** — links to the GitHub repository and issue tracker, a Ko-fi tip
+  button, and the running version.
 
-Per-card settings (type, title, content, colors, size) are edited from the card
-itself in arrange mode — not from the settings tab.
+Per-card settings (type, title, content, colors, opacity, blur, size) are edited
+from the card itself in arrange mode — not from the settings tab.
 
 ## Keyboard shortcuts
 
@@ -388,6 +415,25 @@ load. Adding a language is a matter of copying `en.ts`, translating the values
 [`src/locales/README.md`](src/locales/README.md) for the walkthrough.
 
 ## Shipped:
+
+> **v1.8.0** — a cards-and-appearance release aggregating the whole 1.7.1 beta
+> series. Two new cards headline it: a **Dataview card** that runs a DQL or
+> DataviewJS query and renders the results through
+> **[Dataview](https://github.com/blacksmithgu/obsidian-dataview)**'s own
+> renderers (tables, lists and task lists look native and refresh live, with
+> auto-fitting, drag-resizable table columns), and a beta **Plugin view card**
+> that hosts any plugin's — or a core — **side-panel view** (calendar, outline,
+> tag pane, kanban…) right on the dashboard via a detached workspace leaf that
+> never touches your saved layout. Cards gain **frosted glass** — a backdrop
+> blur behind translucent cards at global, per-dashboard and per-card levels,
+> drawn on one shared layer so merged cards read as a single seamless sheet —
+> and it's now the **default look** for fresh installs. The **settings tab is
+> reorganized** into a category ribbon (Appearance · Search · Dashboard ·
+> Behaviour · Integrations · Backup · About) with a description on every setting
+> and a new **About** tab. Embed cards can carry a **second view** with a
+> switcher and **hide a base's header**, embed **zoom now reflows** to fit its
+> card, and the Tasks card grows a **list filter**, a **custom multi-rule sort**,
+> and multi-value **TaskNotes "complete" statuses**.
 
 > **v1.7.0** — a major Tasks-card release, plus search and release-notes
 > additions (everything from the 1.6.8 beta series). The Tasks card can now read
