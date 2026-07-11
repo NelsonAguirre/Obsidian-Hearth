@@ -27,6 +27,21 @@ export interface ChangelogEntry {
  */
 export const CHANGELOG: ChangelogEntry[] = [
 	{
+		version: "1.8.1.3-beta",
+		tldr:
+			"Layout and settings export/import now use JSON files directly — export " +
+			"downloads a file and import opens a file picker, instead of the clipboard.",
+		features: [
+			"Export / import as files: the Backup buttons now save and load JSON files " +
+				"directly. Export layout and Export settings download a " +
+				"hearth-layout.json / hearth-settings.json file, and Import layout / " +
+				"Import settings open a file picker — no more copying to and pasting from " +
+				"the clipboard. The file format is unchanged, so files shared before this " +
+				"release still import.",
+		],
+		fixes: [],
+	},
+	{
 		version: "1.8.1.2-beta",
 		tldr:
 			"Back up every Hearth setting — not just the layout — as JSON, and a fix " +

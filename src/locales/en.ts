@@ -47,13 +47,10 @@ export const en = {
 		couldNotUndoRecurring: "Hearth: couldn't undo the recurring task completion.",
 		couldNotAddKanbanCard: "Hearth: couldn't add the card to the Kanban board.",
 		couldNotConvertCard: "Hearth: couldn't convert the card into a note.",
-		layoutCopied: "Hearth: layout copied to clipboard.",
-		clipboardUnavailable: "Hearth: couldn't access the clipboard.",
-		pasteLayoutFirst: "Hearth: paste a layout to import first.",
+		layoutExported: "Hearth: layout exported.",
 		layoutImported: "Hearth: layout imported.",
 		layoutImportError: (error: string) => `Hearth: ${error}`,
-		settingsCopied: "Hearth: settings copied to clipboard.",
-		pasteSettingsFirst: "Hearth: paste a settings backup to import first.",
+		settingsExported: "Hearth: settings exported.",
 		settingsImported: "Hearth: settings imported.",
 		cardCopied: "Card copied to the dashboard.",
 	},
@@ -371,27 +368,24 @@ export const en = {
 			heading: "Import / export",
 			headingDesc:
 				"Back up or share your dashboard layout (cards, grid, favorites) — or every " +
-				"Hearth setting — as JSON.",
+				"Hearth setting — as a JSON file.",
 			export: "Export layout",
-			exportDesc: "Copy the current dashboard layout to the clipboard.",
-			copyJson: "Copy JSON",
+			exportDesc: "Download the current dashboard layout as a JSON file.",
+			exportButton: "Export file",
 			import: "Import layout",
 			importDesc:
-				"Paste a previously exported layout, then Import. This replaces your current dashboards.",
-			importPlaceholder: '{ "hearthLayout": 2, "dashboards": [ … ] }',
-			importButton: "Import",
+				"Choose a previously exported layout file. This replaces your current dashboards.",
+			importButton: "Import file",
 			importTitle: "Import layout?",
 			importMessage:
 				"This replaces your current dashboards, pinned cards and layout settings. This can't be undone.",
 			exportSettings: "Export settings",
 			exportSettingsDesc:
-				"Copy every Hearth setting — the full layout plus header, background, " +
-				"behaviour, appearance and TaskNotes options — to the clipboard as a backup.",
+				"Download every Hearth setting — the full layout plus header, background, " +
+				"behaviour, appearance and TaskNotes options — as a JSON backup file.",
 			importSettings: "Import settings",
 			importSettingsDesc:
-				"Paste a previously exported settings backup, then Import. This replaces all " +
-				"your Hearth settings.",
-			importSettingsPlaceholder: '{ "hearthSettings": 1, "dashboards": [ … ] }',
+				"Choose a previously exported settings file. This replaces all your Hearth settings.",
 			importSettingsTitle: "Import settings?",
 			importSettingsMessage:
 				"This replaces all your Hearth settings — dashboards, layout, header, " +

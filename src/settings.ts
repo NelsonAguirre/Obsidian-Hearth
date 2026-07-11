@@ -4,7 +4,7 @@ import { FILE_TYPE_GROUPS, fileTypeLabel } from "./filetypes";
 import { CommandPickerModal } from "./pickers";
 import { BackgroundKind, DEFAULT_SETTINGS, defaultMobileActionButtons, HomeSettings, MobileActionButton } from "./types";
 import { exportLayout, exportSettings, importLayout, importSettings } from "./layout";
-import { confirmAction } from "./ui";
+import { confirmAction, downloadTextFile, pickTextFile } from "./ui";
 import { isOmnisearchAvailable, OMNISEARCH_PLUGIN_ID } from "./omnisearch";
 import { t } from "./i18n";
 
@@ -35,6 +35,10 @@ type StringSettingKey =
 const GITHUB_URL = "https://github.com/ondreu/hearth";
 const GITHUB_ISSUES_URL = "https://github.com/ondreu/hearth/issues/new";
 const KOFI_URL = "https://ko-fi.com/ondru";
+
+/** Download filenames for the JSON exports. */
+const LAYOUT_FILE = "hearth-layout.json";
+const SETTINGS_FILE = "hearth-settings.json";
 
 /** A tab in the settings ribbon: an id (keys `t().settings.tabs`) and a Lucide
  * icon shown beside the label. */
@@ -842,108 +846,90 @@ export class HomeSettingTab extends PluginSettingTab {
 	private layoutSection(containerEl: HTMLElement): void {
 		const s = this.plugin.settings;
 
+		// Export the current dashboard layout as a downloaded JSON file.
 		new Setting(containerEl)
 			.setName(t().settings.layout.export)
 			.setDesc(t().settings.layout.exportDesc)
 			.addButton((b) =>
 				b
-					.setButtonText(t().settings.layout.copyJson)
-					.onClick(async () => {
-						try {
-							await navigator.clipboard.writeText(exportLayout(s));
-							new Notice(t().notices.layoutCopied);
-						} catch {
-							new Notice(t().notices.clipboardUnavailable);
-						}
+					.setButtonText(t().settings.layout.exportButton)
+					.onClick(() => {
+						downloadTextFile(LAYOUT_FILE, exportLayout(s));
+						new Notice(t().notices.layoutExported);
 					}),
 			);
 
-		let pending = "";
+		// Import a dashboard layout from a chosen JSON file.
 		new Setting(containerEl)
 			.setName(t().settings.layout.import)
 			.setDesc(t().settings.layout.importDesc)
-			.addTextArea((txt) => {
-				txt.setPlaceholder(t().settings.layout.importPlaceholder).onChange(
-					(v) => (pending = v),
-				);
-				txt.inputEl.rows = 4;
-				txt.inputEl.addClass("hearth-import-input");
-			})
 			.addButton((b) => {
 				b.buttonEl.addClass("hearth-danger-btn");
-				b.setButtonText(t().settings.layout.importButton).onClick(() => {
-					if (!pending.trim()) {
-						new Notice(t().notices.pasteLayoutFirst);
-						return;
-					}
-					confirmAction(this.app, {
+				b.setButtonText(t().settings.layout.importButton).onClick(() =>
+					this.importFromFile({
 						title: t().settings.layout.importTitle,
 						message: t().settings.layout.importMessage,
-						confirmText: t().settings.layout.importButton,
-						onConfirm: () => {
-							const error = importLayout(s, pending);
-							if (error) {
-								new Notice(t().notices.layoutImportError(error));
-								return;
-							}
-							void this.save();
-							this.display();
-							new Notice(t().notices.layoutImported);
-						},
-					});
-				});
+						apply: (json) => importLayout(s, json),
+						imported: t().notices.layoutImported,
+					}),
+				);
 			});
+
+		// Export every Hearth setting as a downloaded JSON file.
 		new Setting(containerEl)
 			.setName(t().settings.layout.exportSettings)
 			.setDesc(t().settings.layout.exportSettingsDesc)
 			.addButton((b) =>
 				b
-					.setButtonText(t().settings.layout.copyJson)
-					.onClick(async () => {
-						try {
-							await navigator.clipboard.writeText(exportSettings(s));
-							new Notice(t().notices.settingsCopied);
-						} catch {
-							new Notice(t().notices.clipboardUnavailable);
-						}
+					.setButtonText(t().settings.layout.exportButton)
+					.onClick(() => {
+						downloadTextFile(SETTINGS_FILE, exportSettings(s));
+						new Notice(t().notices.settingsExported);
 					}),
 			);
 
-		let pendingSettings = "";
+		// Import a full settings backup from a chosen JSON file.
 		new Setting(containerEl)
 			.setName(t().settings.layout.importSettings)
 			.setDesc(t().settings.layout.importSettingsDesc)
-			.addTextArea((txt) => {
-				txt.setPlaceholder(t().settings.layout.importSettingsPlaceholder).onChange(
-					(v) => (pendingSettings = v),
-				);
-				txt.inputEl.rows = 4;
-				txt.inputEl.addClass("hearth-import-input");
-			})
 			.addButton((b) => {
 				b.buttonEl.addClass("hearth-danger-btn");
-				b.setButtonText(t().settings.layout.importButton).onClick(() => {
-					if (!pendingSettings.trim()) {
-						new Notice(t().notices.pasteSettingsFirst);
-						return;
-					}
-					confirmAction(this.app, {
+				b.setButtonText(t().settings.layout.importButton).onClick(() =>
+					this.importFromFile({
 						title: t().settings.layout.importSettingsTitle,
 						message: t().settings.layout.importSettingsMessage,
-						confirmText: t().settings.layout.importButton,
-						onConfirm: () => {
-							const error = importSettings(s, pendingSettings);
-							if (error) {
-								new Notice(t().notices.layoutImportError(error));
-								return;
-							}
-							void this.save();
-							this.display();
-							new Notice(t().notices.settingsImported);
-						},
-					});
-				});
+						apply: (json) => importSettings(s, json),
+						imported: t().notices.settingsImported,
+					}),
+				);
 			});
+	}
+
+	/** Shared flow for the file-based imports: pick a JSON file, confirm the
+	 * destructive replace, then apply it. `apply` returns an error string or null. */
+	private async importFromFile(opts: {
+		title: string;
+		message: string;
+		apply: (json: string) => string | null;
+		imported: string;
+	}): Promise<void> {
+		const json = await pickTextFile();
+		if (json === null) return; // cancelled or unreadable
+		confirmAction(this.app, {
+			title: opts.title,
+			message: opts.message,
+			confirmText: t().settings.layout.importButton,
+			onConfirm: () => {
+				const error = opts.apply(json);
+				if (error) {
+					new Notice(t().notices.layoutImportError(error));
+					return;
+				}
+				void this.save();
+				this.display();
+				new Notice(opts.imported);
+			},
+		});
 	}
 
 	// ---- About ----------------------------------------------------------
