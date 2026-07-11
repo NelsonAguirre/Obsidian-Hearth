@@ -1,9 +1,9 @@
 import { Menu, Modal, Setting, setIcon } from "obsidian";
 import type { HomeView } from "./view";
 import {
-	BackgroundConfig,
-	BackgroundKind,
-	Dashboard,
+	type BackgroundConfig,
+	type BackgroundKind,
+	type Dashboard,
 	DEFAULT_SETTINGS,
 	newDashboardId,
 	cloneCard,
@@ -118,6 +118,7 @@ function showDashboardMenu(view: HomeView, dash: Dashboard, evt: MouseEvent): vo
 				if (dash.rowHeight != null) copy.rowHeight = dash.rowHeight;
 				if (dash.fitToPage != null) copy.fitToPage = dash.fitToPage;
 				if (dash.maxWidth != null) copy.maxWidth = dash.maxWidth;
+				if (dash.showSearch != null) copy.showSearch = dash.showSearch;
 				if (dash.cardOpacity != null) copy.cardOpacity = dash.cardOpacity;
 				if (dash.cardBlur != null) copy.cardBlur = dash.cardBlur;
 				if (dash.background) copy.background = { ...dash.background };
@@ -156,9 +157,9 @@ function showDashboardMenu(view: HomeView, dash: Dashboard, evt: MouseEvent): vo
 	menu.showAtMouseEvent(evt);
 }
 
-/** Per-dashboard settings: name, switcher icon, and optional overrides for grid
- * columns, row height and background. Overrides fall back to the global
- * settings when left off. */
+/** Per-dashboard settings: name, switcher icon, dashboard chrome, and optional
+ * overrides for grid columns, row height and background. Overrides fall back to
+ * the global settings when left off. */
 class DashboardSettingsModal extends Modal {
 	private view: HomeView;
 	private dash: Dashboard;
@@ -214,6 +215,16 @@ class DashboardSettingsModal extends Modal {
 						dash.iconLucide = v.trim() || undefined;
 						this.commit();
 					}),
+			);
+
+		new Setting(contentEl)
+			.setName(t().dashboards.modal.showSearch)
+			.setDesc(t().dashboards.modal.showSearchDesc)
+			.addToggle((tg) =>
+				tg.setValue(dash.showSearch ?? true).onChange((v) => {
+					dash.showSearch = v ? undefined : false;
+					this.commit();
+				}),
 			);
 
 		this.overrideSlider(
