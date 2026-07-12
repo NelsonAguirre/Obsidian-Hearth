@@ -498,6 +498,8 @@ export interface Dashboard {
 	showSearch?: boolean;
 }
 
+export type ChromeVisibility = "always" | "hover";
+
 export interface HomeSettings {
 	// ---- Header ----
 	title: string;
@@ -543,6 +545,10 @@ export interface HomeSettings {
 	// ---- Appearance (layout density) ----
 	/** Tighten card and top-of-page spacing to enlarge the usable area. */
 	compact: boolean;
+	/** Visibility for the arrange/edit mode entry button. */
+	arrangeButtonVisibility: ChromeVisibility;
+	/** Visibility for the top-left dashboard switcher buttons. */
+	dashboardSwitcherVisibility: ChromeVisibility;
 	/** Card background opacity (0 = fully transparent, 1 = fully opaque). */
 	cardOpacity: number;
 	/** Card surface backdrop blur in pixels — the frosted-glass strength behind
@@ -619,6 +625,8 @@ export const DEFAULT_SETTINGS: HomeSettings = {
 	disableExternalCalls: false,
 
 	compact: false,
+	arrangeButtonVisibility: "always",
+	dashboardSwitcherVisibility: "always",
 	cardOpacity: 0.5,
 	// Frosted glass on by default: a translucent card surface with a gentle blur
 	// of the background behind it. Pairs with the 0.5 opacity above.

@@ -24,7 +24,9 @@ const DEFAULT_DASH_BG_BLUR = DEFAULT_SETTINGS.backgroundBlur;
  */
 export function renderDashboardSwitcher(view: HomeView, container: HTMLElement): void {
 	const s = view.plugin.settings;
-	const bar = container.createDiv("hearth-dash-switcher");
+	const zone = container.createDiv("hearth-dash-switcher-zone");
+	zone.toggleClass("is-auto-hide", s.dashboardSwitcherVisibility === "hover");
+	const bar = zone.createDiv("hearth-dash-switcher");
 
 	s.dashboards.forEach((d, i) => {
 		const lucide = d.iconLucide?.trim();
@@ -53,8 +55,12 @@ export function renderDashboardSwitcher(view: HomeView, container: HTMLElement):
 		btn.addEventListener("dragstart", (e) => {
 			e.dataTransfer?.setData("text/plain", String(i));
 			btn.addClass("is-dragging");
+			bar.addClass("is-dragging");
 		});
-		btn.addEventListener("dragend", () => btn.removeClass("is-dragging"));
+		btn.addEventListener("dragend", () => {
+			btn.removeClass("is-dragging");
+			bar.removeClass("is-dragging");
+		});
 		btn.addEventListener("dragover", (e) => {
 			e.preventDefault();
 			btn.addClass("is-drop-target");
@@ -63,6 +69,7 @@ export function renderDashboardSwitcher(view: HomeView, container: HTMLElement):
 		btn.addEventListener("drop", (e) => {
 			e.preventDefault();
 			btn.removeClass("is-drop-target");
+			bar.removeClass("is-dragging");
 			const from = parseInt(e.dataTransfer?.getData("text/plain") ?? "", 10);
 			if (Number.isNaN(from) || from === i) return;
 			const [moved] = s.dashboards.splice(from, 1);

@@ -32,19 +32,24 @@ export const en = {
 	// ---- Notices (transient toasts) ------------------------------------
 	notices: {
 		couldNotCreateNote: "Hearth: could not create a new note.",
-		enableExcalidraw: "Hearth: enable the Excalidraw plugin to create drawings.",
-		excalidrawCommandMissing: 'Hearth: couldn\'t find Excalidraw\'s "new drawing" command.',
+		enableExcalidraw:
+			"Hearth: enable the Excalidraw plugin to create drawings.",
+		excalidrawCommandMissing:
+			"Hearth: couldn't find Excalidraw's \"new drawing\" command.",
 		enableAudioRecorder: "Hearth: enable the core Audio recorder plugin.",
 		couldNotRecordVoice: "Hearth: couldn't start voice recording.",
 		enableDailyNotes: "Hearth: enable the core Daily notes plugin.",
 		couldNotOpenDaily: "Hearth: couldn't open today's daily note.",
 		commandNotFound: (id: string) => `Hearth: command not found: ${id}`,
-		couldNotCreateNoteForDay: (day: string) => `Hearth: couldn't create a note for ${day}.`,
+		couldNotCreateNoteForDay: (day: string) =>
+			`Hearth: couldn't create a note for ${day}.`,
 		taskNotesCreateFailed: "Hearth: couldn't run TaskNotes: Create new task.",
 		taskChangedOnDisk: "Hearth: that task changed on disk — refreshed.",
 		couldNotUpdateTaskStatus: "Hearth: couldn't update the task status.",
-		couldNotCompleteRecurring: "Hearth: couldn't mark the recurring task instance complete.",
-		couldNotUndoRecurring: "Hearth: couldn't undo the recurring task completion.",
+		couldNotCompleteRecurring:
+			"Hearth: couldn't mark the recurring task instance complete.",
+		couldNotUndoRecurring:
+			"Hearth: couldn't undo the recurring task completion.",
 		couldNotAddKanbanCard: "Hearth: couldn't add the card to the Kanban board.",
 		couldNotConvertCard: "Hearth: couldn't convert the card into a note.",
 		layoutExported: "Hearth: layout exported.",
@@ -137,7 +142,8 @@ export const en = {
 			title: "Dashboard settings",
 			name: "Name",
 			switcherIcon: "Switcher icon",
-			switcherIconDesc: "An emoji or short text shown on the switcher button. Empty = number.",
+			switcherIconDesc:
+				"An emoji or short text shown on the switcher button. Empty = number.",
 			switcherLucide: "Switcher Lucide icon",
 			switcherLucideDesc:
 				"A Lucide icon id (e.g. “home”, “star”, “layout-dashboard”). Takes precedence over the emoji above.",
@@ -156,7 +162,8 @@ export const en = {
 			cardBlur: "Card blur",
 			done: "Done",
 			overriding: "Overriding the global default.",
-			usingGlobal: (value: number | string) => `Using global default (${value}).`,
+			usingGlobal: (value: number | string) =>
+				`Using global default (${value}).`,
 			background: "Background",
 			backgroundDesc: "Override the global background for this dashboard.",
 			backgroundValue: "Background value",
@@ -204,8 +211,11 @@ export const en = {
 			searchBarDesc: "How the search field looks and what it does.",
 			grid: "Grid & spacing",
 			gridDesc: "How the card grid is sized and spaced.",
+			dashboardControls: "Dashboard controls",
+			dashboardControlsDesc: "Visibility for controls around the dashboard.",
 			cardSurface: "Card surface",
-			cardSurfaceDesc: "Transparency and frosted-glass blur applied to every card.",
+			cardSurfaceDesc:
+				"Transparency and frosted-glass blur applied to every card.",
 			startup: "Startup & tabs",
 			startupDesc: "When and where the home view opens.",
 			mobileMode: "Mobile mode",
@@ -220,7 +230,8 @@ export const en = {
 			githubDesc: "Browse the source, star the project, or read the changelog.",
 			githubButton: "Open GitHub",
 			reportIssue: "Report an issue",
-			reportIssueDesc: "Hit a bug or have a feature idea? Open an issue on GitHub.",
+			reportIssueDesc:
+				"Hit a bug or have a feature idea? Open an issue on GitHub.",
 			reportIssueButton: "Report issue",
 			kofi: "Support Hearth",
 			kofiDesc:
@@ -232,8 +243,7 @@ export const en = {
 		},
 		appearance: {
 			heading: "Appearance",
-			headingDesc:
-				"Title, logo, search bar and overall content width.",
+			headingDesc: "Title, logo, search bar and overall content width.",
 			showTitle: "Show title",
 			showTitleDesc: "Display the big title/logo at the top.",
 			title: "Title",
@@ -278,7 +288,8 @@ export const en = {
 			valueImageDesc: "A vault image path, e.g. Attachments/bg.png.",
 			valueUrlDesc: "A direct image URL.",
 			opacity: "Opacity",
-			opacityDesc: "How much the background shows through. Lower is more subtle.",
+			opacityDesc:
+				"How much the background shows through. Lower is more subtle.",
 			blur: "Blur",
 			blurDesc: "Background blur in pixels.",
 			labels: {
@@ -340,7 +351,8 @@ export const en = {
 			dueField: "Due date field",
 			dueFieldDesc: "Frontmatter field read for a task's due date.",
 			priorityField: "Priority field",
-			priorityFieldDesc: "Frontmatter field read for a task's priority indicator.",
+			priorityFieldDesc:
+				"Frontmatter field read for a task's priority indicator.",
 			doneValue: "“Done” status value",
 			doneValueDesc: "The status value that marks a TaskNotes task complete.",
 		},
@@ -354,9 +366,21 @@ export const en = {
 			headingDesc:
 				"Sizing and transparency of the card grid. Cards themselves are added and configured on the board.",
 			fitToPage: "Fit to page",
-			fitToPageDesc: "Keep the dashboard to one screen instead of allowing scroll.",
+			fitToPageDesc:
+				"Keep the dashboard to one screen instead of allowing scroll.",
 			compact: "Compact spacing",
-			compactDesc: "Tighten card padding and top margin to enlarge the usable area.",
+			compactDesc:
+				"Tighten card padding and top margin to enlarge the usable area.",
+			arrangeButtonVisibility: "Arrange button visibility",
+			arrangeButtonVisibilityDesc:
+				"Choose whether the arrange/edit button is always visible or revealed when hovering its area.",
+			dashboardSwitcherVisibility: "Dashboard switcher visibility",
+			dashboardSwitcherVisibilityDesc:
+				"Choose whether the top-left dashboard buttons are always visible or revealed when hovering their area.",
+			visibilityOptions: {
+				always: "Always visible",
+				hover: "Show on hover",
+			},
 			cardOpacity: "Card opacity",
 			cardOpacityDesc:
 				"Transparent card backgrounds so the dashboard background shows through.",
@@ -404,7 +428,8 @@ export const en = {
 		type: "Type",
 		typeDesc: "What this card shows.",
 		cardTitle: "Title",
-		cardTitleDesc: "Shown in the card's header. Leave empty for a headerless card.",
+		cardTitleDesc:
+			"Shown in the card's header. Leave empty for a headerless card.",
 		cardTitlePlaceholder: "Title",
 		resetSize: "Reset to default size",
 		removeCard: "Remove card",
@@ -444,9 +469,11 @@ export const en = {
 			filePlaceholder: "File path to embed",
 			pickFile: "Pick a file",
 			zoom: "Zoom",
-			zoomDesc: "Scale the embedded content. Applies when you close this dialog.",
+			zoomDesc:
+				"Scale the embedded content. Applies when you close this dialog.",
 			editable: "Editable",
-			editableDesc: "Edit the embedded note's text in place (Markdown notes only).",
+			editableDesc:
+				"Edit the embedded note's text in place (Markdown notes only).",
 			hideBaseHeader: "Hide base header",
 			hideBaseHeaderDesc:
 				"For embedded .base files, hide the Bases view's own toolbar (view switcher and filter/property controls) so only the results show.",
@@ -458,7 +485,8 @@ export const en = {
 		},
 		daily: {
 			editable: "Editable",
-			editableDesc: "Edit today's note in place instead of read-only. Saves to the vault.",
+			editableDesc:
+				"Edit today's note in place instead of read-only. Saves to the vault.",
 			openButton: "Open button",
 			openButtonDesc: "Show a button to open today's note in the editor.",
 			info: "Daily notes",
@@ -473,7 +501,8 @@ export const en = {
 				"Allow the page same-origin access (cookies, storage). Only enable " +
 				"for sites you trust — it relaxes the iframe sandbox.",
 			autoRefresh: "Auto-refresh",
-			autoRefreshDesc: "Re-render this card every N seconds to pick up changes. 0 = off.",
+			autoRefreshDesc:
+				"Re-render this card every N seconds to pick up changes. 0 = off.",
 			refreshIntervalAria: "Refresh interval in seconds",
 		},
 		recent: {
@@ -622,7 +651,8 @@ export const en = {
 				"Add, e.g., “canceled” to count cancelled tasks as complete too.",
 			doneStatusesPlaceholder: "done\ncanceled",
 			showCompleted: "Show completed",
-			showCompletedKanbanDesc: "Completed tasks always appear in the Done column on a Kanban board.",
+			showCompletedKanbanDesc:
+				"Completed tasks always appear in the Done column on a Kanban board.",
 			maxTasks: "Max tasks shown",
 			maxTasksDesc: "Sorted by due date (overdue/soonest first), then by file.",
 			folders: "Folders",
@@ -669,7 +699,8 @@ export const en = {
 			degrees: "Degrees",
 			radians: "Radians",
 			keypad: "Keypad",
-			keypadDesc: "Show an on-screen keypad on the card: basic (digits and operations) or scientific (adds functions, powers and constants).",
+			keypadDesc:
+				"Show an on-screen keypad on the card: basic (digits and operations) or scientific (adds functions, powers and constants).",
 			keypadNone: "Hidden",
 			keypadBasic: "Basic",
 			keypadScientific: "Scientific",
@@ -688,7 +719,8 @@ export const en = {
 			queryJsDesc:
 				"DataviewJS code, as inside a ```dataviewjs block (without the fences). " +
 				"The dv API is in scope. Runs arbitrary JavaScript — only use code you trust.",
-			queryDqlPlaceholder: "TABLE file.mtime AS \"Modified\" FROM #project SORT file.mtime DESC",
+			queryDqlPlaceholder:
+				'TABLE file.mtime AS "Modified" FROM #project SORT file.mtime DESC',
 			queryJsPlaceholder: "dv.list(dv.pages('#project').file.link)",
 		},
 		leaf: {
@@ -710,9 +742,11 @@ export const en = {
 			clearAccent: "Clear accent",
 			clearBackground: "Clear background",
 			cardOpacity: "Card opacity",
-			cardOpacityDesc: "Transparent card surface (overrides the dashboard default).",
+			cardOpacityDesc:
+				"Transparent card surface (overrides the dashboard default).",
 			cardBlur: "Card blur",
-			cardBlurDesc: "Frosted-glass blur behind this card (overrides the dashboard default). Needs opacity below 100%.",
+			cardBlurDesc:
+				"Frosted-glass blur behind this card (overrides the dashboard default). Needs opacity below 100%.",
 			useDashboardDefault: "Use dashboard default",
 		},
 		size: {
@@ -729,7 +763,8 @@ export const en = {
 		},
 		copy: {
 			heading: "Copy to dashboard",
-			headingDesc: "Add a duplicate of this card to the end of another dashboard.",
+			headingDesc:
+				"Add a duplicate of this card to the end of another dashboard.",
 			copy: "Copy",
 			copyTooltip: "Copy this card to the selected dashboard",
 		},
@@ -752,14 +787,17 @@ export const en = {
 			recentEmpty: "No recent files",
 			linksEmpty: "Add links in settings",
 			commandsEmpty: "Add commands in card settings",
-			tasksEnable: "Enable the TaskNotes plugin, or switch source to checkboxes",
+			tasksEnable:
+				"Enable the TaskNotes plugin, or switch source to checkboxes",
 			tasksEmpty: "No open tasks",
 			tasksNoMatch: "No tasks match the filter",
-			kanbanNoBoard: "No Kanban board found — pick a board note in card settings, or create one with the Kanban plugin",
+			kanbanNoBoard:
+				"No Kanban board found — pick a board note in card settings, or create one with the Kanban plugin",
 			dataviewEnable: "Enable the Dataview plugin to run queries",
 			dataviewNoQuery: "Set a Dataview query in card settings",
 			leafPickView: "Pick a plugin view in card settings",
-			leafViewMissing: "This view isn't available — enable the plugin that provides it",
+			leafViewMissing:
+				"This view isn't available — enable the plugin that provides it",
 		},
 		embed: {
 			editHint: "Double-click to edit",
@@ -789,7 +827,8 @@ export const en = {
 			nextMonth: "Next month",
 			backToToday: "Back to today",
 			dayEdited: (date: string, count: number) => `${date}: ${count} edited`,
-			dayMetric: (date: string, count: number, metric: string) => `${date}: ${count} ${metric}`,
+			dayMetric: (date: string, count: number, metric: string) =>
+				`${date}: ${count} ${metric}`,
 		},
 		stats: {
 			notes: "Notes",
@@ -828,7 +867,8 @@ export const en = {
 			save: "Save",
 			cancel: "Cancel",
 			setDoneColumn: (label: string) => `Mark "${label}" as a done column`,
-			unsetDoneColumn: (label: string) => `Stop "${label}" auto-completing cards`,
+			unsetDoneColumn: (label: string) =>
+				`Stop "${label}" auto-completing cards`,
 			dueDate: "Due date",
 			startDate: "Start date",
 			scheduledDate: "Scheduled date",
@@ -837,7 +877,12 @@ export const en = {
 			recurrenceNever: "Never",
 			recurrenceEvery: "every",
 			recurrenceInterval: "Repeat interval",
-			recurrenceUnits: { day: "Daily", week: "Weekly", month: "Monthly", year: "Yearly" },
+			recurrenceUnits: {
+				day: "Daily",
+				week: "Weekly",
+				month: "Monthly",
+				year: "Yearly",
+			},
 			taskCount: (n: number) => (n === 1 ? "1 task" : `${n} tasks`),
 			description: "Description",
 			descriptionPlaceholder: "Notes… (plain text)",
@@ -861,7 +906,8 @@ export const en = {
 			sortCustom: "Custom",
 			sortCustomOption: "Custom sort…",
 			sortTitle: "Custom sort",
-			sortHint: "Sort tasks by these rules in order — the first is the primary sort, each next one breaks ties.",
+			sortHint:
+				"Sort tasks by these rules in order — the first is the primary sort, each next one breaks ties.",
 			sortFields: {
 				due: "Due date",
 				scheduled: "Scheduled date",
@@ -926,7 +972,8 @@ export const en = {
 			year: "year",
 		},
 		everyOne: (unit: string) => `Repeats every ${unit}`,
-		everyMany: (count: number, unit: string) => `Repeats every ${count} ${unit}s`,
+		everyMany: (count: number, unit: string) =>
+			`Repeats every ${count} ${unit}s`,
 	},
 
 	// ---- Clock greetings -----------------------------------------------
