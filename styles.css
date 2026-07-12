@@ -151,7 +151,9 @@
 	background: var(--background-primary);
 	border: 1px solid var(--background-modifier-border);
 	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
-	transition: border-color 120ms ease, box-shadow 120ms ease;
+	transition:
+		border-color 120ms ease,
+		box-shadow 120ms ease;
 }
 
 .hearth-search-bar:focus-within {
@@ -191,7 +193,9 @@
 	cursor: pointer;
 	font-size: 0.95rem;
 	white-space: nowrap;
-	transition: background 120ms ease, border-color 120ms ease;
+	transition:
+		background 120ms ease,
+		border-color 120ms ease;
 }
 
 .hearth-newnote:hover {
@@ -202,7 +206,6 @@
 .hearth-newnote-icon {
 	display: flex;
 }
-
 
 /* ---- Search results dropdown --------------------------------------- */
 
@@ -407,13 +410,19 @@
 	border-radius: 14px;
 	border: 1px solid var(--background-modifier-border);
 	/* --card-opacity (0..1) tints the card surface without dimming content. */
-	background: color-mix(in srgb, var(--background-primary) calc(var(--card-opacity, 1) * 100%), transparent);
+	background: color-mix(
+		in srgb,
+		var(--background-primary) calc(var(--card-opacity, 1) * 100%),
+		transparent
+	);
 	/* Drop shadow via a variable so merged edges can drop it (see below) and
 	 * hover can lift it without re-declaring the whole shadow. */
 	--hearth-card-lift: 0 2px 12px rgba(0, 0, 0, 0.06);
 	box-shadow: var(--hearth-card-lift);
 	overflow: hidden;
-	transition: box-shadow 120ms ease, transform 120ms ease;
+	transition:
+		box-shadow 120ms ease,
+		transform 120ms ease;
 }
 
 /* Frosted glass: a SINGLE shared blur layer per grid, not a backdrop-filter on
@@ -883,7 +892,9 @@
 	cursor: pointer;
 	white-space: nowrap;
 	box-shadow: none;
-	transition: background 120ms ease, color 120ms ease;
+	transition:
+		background 120ms ease,
+		color 120ms ease;
 }
 
 .hearth-ribbon-tab:hover {
@@ -918,8 +929,12 @@
 }
 
 @keyframes hearth-tab-fade {
-	from { opacity: 0; }
-	to { opacity: 1; }
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
 }
 
 /* ---- Settings tab: About panel --------------------------------------
@@ -1158,7 +1173,9 @@
 	border: 1px solid var(--background-modifier-border);
 	background: var(--background-secondary);
 	cursor: pointer;
-	transition: border-color 120ms ease, background 120ms ease;
+	transition:
+		border-color 120ms ease,
+		background 120ms ease;
 }
 
 .hearth-fav-card:hover {
@@ -1357,7 +1374,11 @@
 	background: var(--background-secondary);
 	cursor: pointer;
 	text-align: center;
-	transition: border-color 120ms ease, background 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+	transition:
+		border-color 120ms ease,
+		background 120ms ease,
+		transform 120ms ease,
+		box-shadow 120ms ease;
 }
 
 /* Per-tile width/height: converted to grid column/row spans inline by
@@ -1470,14 +1491,22 @@
 .hearth-link-tile.is-obscured {
 	outline: 2px solid var(--color-red, #f55);
 	outline-offset: 2px;
-	box-shadow: 0 0 12px 2px color-mix(in srgb, var(--color-red, #f55) 55%, transparent);
+	box-shadow: 0 0 12px 2px
+		color-mix(in srgb, var(--color-red, #f55) 55%, transparent);
 	border-color: var(--color-red, #f55);
 	animation: hearth-tile-obscured-pulse 1.6s ease-in-out infinite;
 }
 
 @keyframes hearth-tile-obscured-pulse {
-	0%, 100% { box-shadow: 0 0 8px 1px color-mix(in srgb, var(--color-red, #f55) 40%, transparent); }
-	50% { box-shadow: 0 0 16px 3px color-mix(in srgb, var(--color-red, #f55) 65%, transparent); }
+	0%,
+	100% {
+		box-shadow: 0 0 8px 1px
+			color-mix(in srgb, var(--color-red, #f55) 40%, transparent);
+	}
+	50% {
+		box-shadow: 0 0 16px 3px
+			color-mix(in srgb, var(--color-red, #f55) 65%, transparent);
+	}
 }
 
 .hearth-link-label {
@@ -1797,13 +1826,61 @@
 	height: 15px;
 }
 
+.hearth-arrange-zone {
+	display: flex;
+	align-items: center;
+}
+
+.hearth-arrange-zone.is-auto-hide {
+	padding: 16px;
+}
+
+.hearth-arrange-zone.is-auto-hide .hearth-tool-btn {
+	opacity: 0;
+	pointer-events: none;
+	transform: translateX(8px);
+}
+
+.hearth-arrange-zone.is-auto-hide:hover .hearth-tool-btn,
+.hearth-arrange-zone.is-auto-hide:focus-within .hearth-tool-btn {
+	opacity: 1;
+	pointer-events: auto;
+	transform: translateX(0);
+}
+
 /* ---- Dashboard switcher (top-left) ---------------------------------- */
+
+.hearth-dash-switcher-zone {
+	display: flex;
+	align-items: center;
+}
+
+.hearth-dash-switcher-zone.is-auto-hide {
+	padding: 16px 0;
+}
 
 .hearth-dash-switcher {
 	display: flex;
 	align-items: center;
 	gap: 6px;
 	margin-bottom: -16px;
+	transition:
+		opacity 120ms ease,
+		transform 120ms ease;
+}
+
+.hearth-dash-switcher-zone.is-auto-hide .hearth-dash-switcher {
+	opacity: 0;
+	pointer-events: none;
+	transform: translateY(-4px);
+}
+
+.hearth-dash-switcher-zone.is-auto-hide:hover .hearth-dash-switcher,
+.hearth-dash-switcher-zone.is-auto-hide:focus-within .hearth-dash-switcher,
+.hearth-dash-switcher-zone.is-auto-hide .hearth-dash-switcher.is-dragging {
+	opacity: 1;
+	pointer-events: auto;
+	transform: translateY(0);
 }
 
 .hearth-dash-btn {
@@ -1907,7 +1984,9 @@
 	cursor: pointer;
 	font-size: 0.92rem;
 	white-space: nowrap;
-	transition: background 120ms ease, border-color 120ms ease;
+	transition:
+		background 120ms ease,
+		border-color 120ms ease;
 }
 
 .hearth-mobile-action:hover {
@@ -2030,10 +2109,18 @@
  * corner only flattens when a neighbour actually reaches it, so two cards that
  * share an edge only along part of its length keep the rounded corners that
  * don't touch anything. */
-.hearth-card.merge-tl { border-top-left-radius: 0; }
-.hearth-card.merge-tr { border-top-right-radius: 0; }
-.hearth-card.merge-bl { border-bottom-left-radius: 0; }
-.hearth-card.merge-br { border-bottom-right-radius: 0; }
+.hearth-card.merge-tl {
+	border-top-left-radius: 0;
+}
+.hearth-card.merge-tr {
+	border-top-right-radius: 0;
+}
+.hearth-card.merge-bl {
+	border-bottom-left-radius: 0;
+}
+.hearth-card.merge-br {
+	border-bottom-right-radius: 0;
+}
 
 .hearth-card.has-accent {
 	border-color: var(--card-accent);
@@ -2052,10 +2139,18 @@
  * background fills the now-borderless edge (box-sizing is border-box).
  * Deliberately placed after the accent rules so a touching edge goes
  * borderless even on accent-coloured cards. */
-.hearth-card.merge-top { border-top-color: transparent; }
-.hearth-card.merge-bottom { border-bottom-color: transparent; }
-.hearth-card.merge-left { border-left-color: transparent; }
-.hearth-card.merge-right { border-right-color: transparent; }
+.hearth-card.merge-top {
+	border-top-color: transparent;
+}
+.hearth-card.merge-bottom {
+	border-bottom-color: transparent;
+}
+.hearth-card.merge-left {
+	border-left-color: transparent;
+}
+.hearth-card.merge-right {
+	border-right-color: transparent;
+}
 
 /* Drop the drop-shadow on any card that shares a full edge with a neighbour.
  * The base shadow (0 2px 12px) is offset 2px downward, so a card stacked above
@@ -2198,8 +2293,12 @@
 	height: 8px;
 	cursor: ns-resize;
 }
-.hearth-resize-handle.is-n { top: 0; }
-.hearth-resize-handle.is-s { bottom: 0; }
+.hearth-resize-handle.is-n {
+	top: 0;
+}
+.hearth-resize-handle.is-s {
+	bottom: 0;
+}
 
 .hearth-resize-handle.is-e,
 .hearth-resize-handle.is-w {
@@ -2208,8 +2307,12 @@
 	width: 8px;
 	cursor: ew-resize;
 }
-.hearth-resize-handle.is-e { right: 0; }
-.hearth-resize-handle.is-w { left: 0; }
+.hearth-resize-handle.is-e {
+	right: 0;
+}
+.hearth-resize-handle.is-w {
+	left: 0;
+}
 
 /* Corners (sit above the edge strips) */
 .hearth-resize-handle.is-ne,
@@ -2220,17 +2323,37 @@
 	height: 16px;
 	z-index: 7;
 }
-.hearth-resize-handle.is-nw { top: 0; left: 0; cursor: nwse-resize; }
-.hearth-resize-handle.is-se { bottom: 0; right: 0; cursor: nwse-resize; }
-.hearth-resize-handle.is-ne { top: 0; right: 0; cursor: nesw-resize; }
-.hearth-resize-handle.is-sw { bottom: 0; left: 0; cursor: nesw-resize; }
+.hearth-resize-handle.is-nw {
+	top: 0;
+	left: 0;
+	cursor: nwse-resize;
+}
+.hearth-resize-handle.is-se {
+	bottom: 0;
+	right: 0;
+	cursor: nwse-resize;
+}
+.hearth-resize-handle.is-ne {
+	top: 0;
+	right: 0;
+	cursor: nesw-resize;
+}
+.hearth-resize-handle.is-sw {
+	bottom: 0;
+	left: 0;
+	cursor: nesw-resize;
+}
 
 /* Bigger, easier-to-grab resize targets on touch devices. */
 @media (pointer: coarse) {
 	.hearth-resize-handle.is-n,
-	.hearth-resize-handle.is-s { height: 14px; }
+	.hearth-resize-handle.is-s {
+		height: 14px;
+	}
 	.hearth-resize-handle.is-e,
-	.hearth-resize-handle.is-w { width: 14px; }
+	.hearth-resize-handle.is-w {
+		width: 14px;
+	}
 	.hearth-resize-handle.is-ne,
 	.hearth-resize-handle.is-nw,
 	.hearth-resize-handle.is-se,
@@ -2292,7 +2415,12 @@
  * stable --accent-h/s/l vars (not --interactive-accent-hsl, which is
  * comma-separated on some Obsidian versions and would break slash-alpha). */
 .hearth-calendar-day.has-heat {
-	background-color: hsla(var(--accent-h), var(--accent-s), var(--accent-l), calc(var(--heat, 0) * 0.22));
+	background-color: hsla(
+		var(--accent-h),
+		var(--accent-s),
+		var(--accent-l),
+		calc(var(--heat, 0) * 0.22)
+	);
 }
 
 /* ---- Tasks: TaskNotes quick-add button ------------------------------ */
@@ -2339,7 +2467,10 @@
 	cursor: pointer;
 	opacity: 0;
 	pointer-events: auto;
-	transition: opacity 140ms ease, background 140ms ease, border-color 140ms ease;
+	transition:
+		opacity 140ms ease,
+		background 140ms ease,
+		border-color 140ms ease;
 }
 
 /* Reveal the "new task" button whenever the whole card is hovered (not just
@@ -2767,7 +2898,11 @@ body.hearth-dv-resizing {
 	font-weight: 600;
 	cursor: pointer;
 	pointer-events: auto;
-	transition: opacity 140ms ease, background 140ms ease, color 140ms ease, border-color 140ms ease;
+	transition:
+		opacity 140ms ease,
+		background 140ms ease,
+		color 140ms ease,
+		border-color 140ms ease;
 }
 
 .hearth-tasks-sort:hover,
@@ -2850,7 +2985,10 @@ body.hearth-dv-resizing {
 	color: var(--text-normal);
 	font-size: 0.78rem;
 	cursor: pointer;
-	transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+	transition:
+		background 140ms ease,
+		color 140ms ease,
+		border-color 140ms ease;
 }
 
 .hearth-taskfilter-chip:hover {
@@ -2954,7 +3092,9 @@ body.hearth-dv-resizing {
 	font-weight: 600;
 	line-height: 1.5;
 	cursor: pointer;
-	transition: background 140ms ease, color 140ms ease;
+	transition:
+		background 140ms ease,
+		color 140ms ease;
 }
 
 .hearth-embed-switch-btn:hover {
@@ -3002,7 +3142,12 @@ body.hearth-dv-resizing {
 }
 
 .hearth-heatmap-cell.has-heat {
-	background-color: hsla(var(--accent-h), var(--accent-s), var(--accent-l), calc(0.15 + var(--heat, 0) * 0.2125));
+	background-color: hsla(
+		var(--accent-h),
+		var(--accent-s),
+		var(--accent-l),
+		calc(0.15 + var(--heat, 0) * 0.2125)
+	);
 	cursor: pointer;
 }
 
@@ -3098,7 +3243,8 @@ body.hearth-dv-resizing {
    for colour-blind users or at a glance. */
 .hearth-task-priority.is-highest .hearth-task-priority-dot {
 	background: var(--color-pink, #d01e5b);
-	box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-pink, #d01e5b) 35%, transparent);
+	box-shadow: 0 0 0 2px
+		color-mix(in srgb, var(--color-pink, #d01e5b) 35%, transparent);
 }
 
 .hearth-task-priority.is-high .hearth-task-priority-dot {
