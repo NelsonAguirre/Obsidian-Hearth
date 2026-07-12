@@ -90,9 +90,6 @@ export const en = {
 	whatsNew: {
 		title: "What's new in Hearth",
 		intro: "Thanks for updating! Here's what's changed since you last checked.",
-		tldr: "TL;DR",
-		features: "New features",
-		fixes: "Bug fixes & polish",
 		close: "Got it",
 		footer: "Full details live in the plugin's README.",
 	},
@@ -226,6 +223,9 @@ export const en = {
 		about: {
 			heading: "About Hearth",
 			headingDesc: "Project links, support and version.",
+			whatsNew: "What's new",
+			whatsNewDesc: "Read the release notes for this and every past version.",
+			whatsNewButton: "View changelog",
 			github: "GitHub repository",
 			githubDesc: "Browse the source, star the project, or read the changelog.",
 			githubButton: "Open GitHub",
