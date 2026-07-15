@@ -140,6 +140,7 @@ export const en = {
 			/** Tabs across the top of the dashboard settings modal. */
 			tabs: {
 				general: "General",
+				header: "Header",
 				layout: "Layout",
 				style: "Style",
 				background: "Background",
@@ -154,6 +155,30 @@ export const en = {
 			lucidePlaceholder: "home",
 			showSearch: "Show search section",
 			showSearchDesc: "Show the search and command bar with its results and filter buttons on this dashboard.",
+			titleVisibility: "Title visibility",
+			titleVisibilityDesc:
+				"Show or hide only the title/logo block for this dashboard. Search visibility is separate.",
+			titleVisibilityDefault: (state: string) => `Use global default (${state})`,
+			visibilityShown: "shown",
+			visibilityHidden: "hidden",
+			visibilityShow: "Show title",
+			visibilityHide: "Hide title",
+			titleText: "Title text",
+			titleTextDesc: "Override the global title text for this dashboard.",
+			logoText: "Logo text",
+			logoTextDesc:
+				"Override the global logo for this dashboard. Empty uses the Hearth crystal icon.",
+			titleAlign: "Title alignment",
+			titleAlignDesc:
+				"Align only the title/logo block. The search bar keeps its own layout.",
+			alignDefault: "Default (center)",
+			alignLeft: "Left",
+			alignCenter: "Center",
+			alignRight: "Right",
+			titleSize: "Title size",
+			logoSize: "Logo size",
+			titleTopMargin: "Title top margin",
+			headerSpacingBelow: "Spacing below title/header",
 			contentWidth: "Content width",
 			fitToPage: "Fit to page",
 			fitToPageDesc: "Override scrolling for this board.",
@@ -169,6 +194,10 @@ export const en = {
 			overriding: "Overriding the global default.",
 			usingGlobal: (value: number | string) =>
 				`Using global default (${value}).`,
+			usingDefault: (value: number | string) =>
+				`Using default (${value}).`,
+			usingDefaultText: (value: string) =>
+				`Using default (${value}).`,
 			background: "Background",
 			backgroundDesc: "Override the global background for this dashboard.",
 			backgroundValue: "Background value",

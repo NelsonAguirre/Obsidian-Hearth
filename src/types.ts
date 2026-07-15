@@ -521,6 +521,28 @@ export interface BackgroundConfig {
 
 /** A named dashboard: one arrangeable board of cards. The vault can hold several
  * and switch between them from the top-left switcher. */
+export type HeaderAlign = "left" | "center" | "right";
+
+export interface DashboardHeaderConfig {
+	/** Override the global title visibility (undefined = use global). */
+	showTitle?: boolean;
+	/** Override the global title text for this dashboard. */
+	title?: string;
+	/** Override the global logo text/icon for this dashboard. Empty = Hearth icon. */
+	logo?: string;
+	/** Align only the title/logo block; search remains controlled separately. */
+	align?: HeaderAlign;
+	/** Title size multiplier, clamped to a conservative range. */
+	titleScale?: number;
+	/** Logo size multiplier, clamped to a conservative range. */
+	logoScale?: number;
+	/** Title block top margin in pixels. Undefined keeps the stylesheet default. */
+	marginTop?: number;
+	/** Spacing below the whole header block in pixels. Undefined keeps the
+	 * stylesheet default. */
+	spacingBelow?: number;
+}
+
 export interface Dashboard {
 	id: string;
 	name: string;
@@ -546,6 +568,8 @@ export interface Dashboard {
 	cardBlur?: number;
 	/** Override the card corner radius (px) for this board (undefined = global). */
 	cardRadius?: number;
+	/** Per-dashboard overrides for the title/logo block. */
+	header?: DashboardHeaderConfig;
 	/** Show the dashboard search/command section (undefined = visible). */
 	showSearch?: boolean;
 }
@@ -842,6 +866,75 @@ export function effectiveFitToPage(s: HomeSettings): boolean {
 /** Whether the active board should show the search/command section. */
 export function effectiveShowSearch(s: HomeSettings): boolean {
 	return activeDashboard(s).showSearch ?? true;
+}
+
+export const HEADER_SCALE_MIN = 0.6;
+export const HEADER_SCALE_MAX = 1.8;
+export const HEADER_MARGIN_TOP_MIN = 0;
+export const HEADER_MARGIN_TOP_MAX = 96;
+export const HEADER_SPACING_BELOW_MIN = 0;
+export const HEADER_SPACING_BELOW_MAX = 96;
+
+function clampHeaderScale(v: unknown): number {
+	return typeof v === "number" && !Number.isNaN(v)
+		? Math.max(HEADER_SCALE_MIN, Math.min(HEADER_SCALE_MAX, v))
+		: 1;
+}
+
+function clampHeaderMarginTop(v: unknown): number | undefined {
+	return typeof v === "number" && !Number.isNaN(v)
+		? Math.max(HEADER_MARGIN_TOP_MIN, Math.min(HEADER_MARGIN_TOP_MAX, Math.round(v)))
+		: undefined;
+}
+
+function clampHeaderSpacingBelow(v: unknown): number | undefined {
+	return typeof v === "number" && !Number.isNaN(v)
+		? Math.max(
+				HEADER_SPACING_BELOW_MIN,
+				Math.min(HEADER_SPACING_BELOW_MAX, Math.round(v)),
+			)
+		: undefined;
+}
+
+/** Whether the active board should show the title/logo block. */
+export function effectiveShowTitle(s: HomeSettings): boolean {
+	return activeDashboard(s).header?.showTitle ?? s.showTitle;
+}
+
+/** Title text for the active board's title/logo block. */
+export function effectiveTitle(s: HomeSettings): string {
+	return activeDashboard(s).header?.title ?? s.title;
+}
+
+/** Logo text for the active board's title/logo block. Empty = Hearth icon. */
+export function effectiveLogo(s: HomeSettings): string {
+	return activeDashboard(s).header?.logo ?? s.logo;
+}
+
+/** Alignment for the active board's title/logo block; search layout is separate. */
+export function effectiveHeaderAlign(s: HomeSettings): HeaderAlign {
+	const align = activeDashboard(s).header?.align;
+	return align === "left" || align === "right" ? align : "center";
+}
+
+/** Title size multiplier for the active board's title/logo block. */
+export function effectiveHeaderTitleScale(s: HomeSettings): number {
+	return clampHeaderScale(activeDashboard(s).header?.titleScale);
+}
+
+/** Logo size multiplier for the active board's title/logo block. */
+export function effectiveHeaderLogoScale(s: HomeSettings): number {
+	return clampHeaderScale(activeDashboard(s).header?.logoScale);
+}
+
+/** Optional title block top margin override in pixels. Undefined keeps CSS default. */
+export function effectiveHeaderMarginTop(s: HomeSettings): number | undefined {
+	return clampHeaderMarginTop(activeDashboard(s).header?.marginTop);
+}
+
+/** Optional spacing below the whole header block in pixels. Undefined keeps CSS default. */
+export function effectiveHeaderSpacingBelow(s: HomeSettings): number | undefined {
+	return clampHeaderSpacingBelow(activeDashboard(s).header?.spacingBelow);
 }
 
 /** Effective content max-width for the active board (per-dashboard override or global). */
