@@ -479,7 +479,8 @@
 	/* --hearth-card-radius (px) is set per-board by renderDashboard; the 14px
 	 * fallback keeps the design baseline when it isn't set. */
 	border-radius: var(--hearth-card-radius, 14px);
-	border: 1px solid var(--background-modifier-border);
+	border: var(--card-border-width, 1px) solid
+		var(--background-modifier-border);
 	/* --card-opacity (0..1) tints the card surface without dimming content. */
 	background: color-mix(
 		in srgb,
@@ -565,7 +566,8 @@
 	display: flex;
 	align-items: center;
 	padding: 10px 14px;
-	border-bottom: 1px solid var(--background-modifier-border);
+	border-bottom: var(--card-border-width, 1px) solid
+		var(--background-modifier-border);
 }
 
 .hearth-card-title {
@@ -2460,21 +2462,24 @@
 }
 
 /* Collapse the shared border between touching cards so there's no double line
- * — the two surfaces meet flush and look like a single tile. The card's own
- * background fills the now-borderless edge (box-sizing is border-box).
- * Deliberately placed after the accent rules so a touching edge goes
- * borderless even on accent-coloured cards. */
+ * — the two surfaces meet flush and look like a single tile. Remove the shared
+ * border width rather than making it transparent: at thicker border widths a
+ * transparent border still occupies space and reads as a notch/pike where
+ * merged edges meet the rounded outer frame. With border-box sizing this does
+ * not expand cards outward; it only lets the card background fill the shared
+ * edge inside the existing card box. Deliberately placed after the accent rules
+ * so a touching edge goes borderless even on accent-coloured cards. */
 .hearth-card.merge-top {
-	border-top-color: transparent;
+	border-top-width: 0;
 }
 .hearth-card.merge-bottom {
-	border-bottom-color: transparent;
+	border-bottom-width: 0;
 }
 .hearth-card.merge-left {
-	border-left-color: transparent;
+	border-left-width: 0;
 }
 .hearth-card.merge-right {
-	border-right-color: transparent;
+	border-right-width: 0;
 }
 
 /* Drop the drop-shadow on any card that shares a full edge with a neighbour.

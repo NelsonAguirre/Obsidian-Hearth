@@ -568,6 +568,8 @@ export interface Dashboard {
 	cardBlur?: number;
 	/** Override the card corner radius (px) for this board (undefined = global). */
 	cardRadius?: number;
+	/** Override the card border width (px) for this board (undefined = global). */
+	cardBorderWidth?: number;
 	/** Per-dashboard overrides for the title/logo block. */
 	header?: DashboardHeaderConfig;
 	/** Show the dashboard search/command section (undefined = visible). */
@@ -634,6 +636,9 @@ export interface HomeSettings {
 	 * design default of 14; larger is disallowed so nothing that assumes the
 	 * baseline rounding (merged-edge sharpening, the frost mask) breaks. */
 	cardRadius: number;
+	/** Card border width in pixels. 0 removes the visible card border and the
+	 * header divider line. */
+	cardBorderWidth: number;
 
 	// ---- Search filters ----
 	/** Group ids the user has hidden from the auto-detected filter row. */
@@ -714,6 +719,8 @@ export const DEFAULT_SETTINGS: HomeSettings = {
 	// The design baseline corner radius; also the maximum (only sharper is
 	// allowed) so it matches the hardcoded 14 the layout was tuned around.
 	cardRadius: 14,
+	// Default card border width preserves the classic 1px look.
+	cardBorderWidth: 1,
 
 	hiddenFilters: [],
 
@@ -974,6 +981,7 @@ export function resolveCardBlur(s: HomeSettings, card: DashboardCard): number {
  * allows: rounding beyond this was never tuned for (merged-edge sharpening, the
  * frosted-glass mask, arrange outlines) so only sharper is offered. */
 export const CARD_RADIUS_MAX = 14;
+export const CARD_BORDER_WIDTH_MAX = 8;
 
 /** Effective card corner radius (px) for the active board (per-dashboard
  * override or global), clamped to [0, CARD_RADIUS_MAX]. Applied board-wide via
@@ -984,6 +992,15 @@ export function effectiveCardRadius(s: HomeSettings): number {
 	return typeof v === "number" && !Number.isNaN(v)
 		? Math.max(0, Math.min(CARD_RADIUS_MAX, v))
 		: CARD_RADIUS_MAX;
+}
+
+/** Effective card border width (px) for the active board (per-dashboard
+ * override or global), clamped to [0, CARD_BORDER_WIDTH_MAX]. */
+export function effectiveCardBorderWidth(s: HomeSettings): number {
+	const v = activeDashboard(s).cardBorderWidth ?? s.cardBorderWidth;
+	return typeof v === "number" && !Number.isNaN(v)
+		? Math.max(0, Math.min(CARD_BORDER_WIDTH_MAX, Math.round(v)))
+		: 1;
 }
 
 /** Remove a card from whichever list holds it (a board or the pinned set). */
@@ -1089,6 +1106,7 @@ export function migrateSettings(s: HomeSettings, raw: Record<string, unknown>): 
 	if (typeof s.cardOpacity !== "number") s.cardOpacity = 0.5;
 	if (typeof s.cardBlur !== "number") s.cardBlur = 7;
 	if (typeof s.cardRadius !== "number") s.cardRadius = CARD_RADIUS_MAX;
+	if (typeof s.cardBorderWidth !== "number") s.cardBorderWidth = 1;
 	if (typeof s.backgroundOpacity !== "number") s.backgroundOpacity = 0.35;
 	if (typeof s.backgroundBlur !== "number") s.backgroundBlur = 2;
 	// Fit-to-page is the default for fresh installs; existing users keep their

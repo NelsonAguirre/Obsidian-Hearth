@@ -7,6 +7,7 @@ import {
 	type DashboardHeaderConfig,
 	type HeaderAlign,
 	CARD_RADIUS_MAX,
+	CARD_BORDER_WIDTH_MAX,
 	HEADER_MARGIN_TOP_MAX,
 	HEADER_MARGIN_TOP_MIN,
 	HEADER_SCALE_MAX,
@@ -149,6 +150,8 @@ function showDashboardMenu(
 				if (dash.cardOpacity != null) copy.cardOpacity = dash.cardOpacity;
 				if (dash.cardBlur != null) copy.cardBlur = dash.cardBlur;
 				if (dash.cardRadius != null) copy.cardRadius = dash.cardRadius;
+				if (dash.cardBorderWidth != null)
+					copy.cardBorderWidth = dash.cardBorderWidth;
 				if (dash.header) copy.header = { ...dash.header };
 				if (dash.background) copy.background = { ...dash.background };
 				const i = s.dashboards.findIndex((d) => d.id === dash.id);
@@ -629,6 +632,20 @@ class DashboardSettingsModal extends HearthTabbedModal {
 			1,
 			(v) => {
 				dash.cardRadius = v;
+				this.commit();
+			},
+		);
+
+		this.overrideSlider(
+			containerEl,
+			t().dashboards.modal.cardBorderWidth,
+			dash.cardBorderWidth,
+			s.cardBorderWidth,
+			0,
+			CARD_BORDER_WIDTH_MAX,
+			1,
+			(v) => {
+				dash.cardBorderWidth = v;
 				this.commit();
 			},
 		);

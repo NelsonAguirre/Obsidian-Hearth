@@ -22,6 +22,7 @@ import {
 	type TaskSortRule,
 	type TasksConfig,
 	activeDashboard,
+	CARD_BORDER_WIDTH_MAX,
 } from "./types";
 import { isEmbeddableBaseViewName } from "./bases";
 import { t } from "./i18n";
@@ -59,6 +60,7 @@ const RANGE = {
 	cardH: { min: 1, max: 60 },
 	cardBlur: { min: 0, max: 24 },
 	cardRadius: { min: 0, max: 14 },
+	cardBorderWidth: { min: 0, max: CARD_BORDER_WIDTH_MAX },
 	headerScale: { min: 0.6, max: 1.8 },
 	headerMarginTop: { min: 0, max: 96 },
 	headerSpacingBelow: { min: 0, max: 96 },
@@ -144,6 +146,7 @@ export function exportSettings(s: HomeSettings): string {
 		cardOpacity: s.cardOpacity,
 		cardBlur: s.cardBlur,
 		cardRadius: s.cardRadius,
+		cardBorderWidth: s.cardBorderWidth,
 
 		// Search filters
 		hiddenFilters: s.hiddenFilters,
@@ -762,6 +765,14 @@ function sanitizeDashboard(
 			s.cardRadius,
 		);
 	}
+	if (typeof r.cardBorderWidth === "number") {
+		dash.cardBorderWidth = clampNum(
+			r.cardBorderWidth,
+			RANGE.cardBorderWidth.min,
+			RANGE.cardBorderWidth.max,
+			s.cardBorderWidth,
+		);
+	}
 	const bg = sanitizeBackground(r.background);
 	if (bg) dash.background = bg;
 	return dash;
@@ -1000,6 +1011,14 @@ function applySettings(s: HomeSettings, data: Record<string, unknown>): void {
 			RANGE.cardRadius.min,
 			RANGE.cardRadius.max,
 			s.cardRadius,
+		);
+	}
+	if (typeof data.cardBorderWidth === "number") {
+		s.cardBorderWidth = clampNum(
+			data.cardBorderWidth,
+			RANGE.cardBorderWidth.min,
+			RANGE.cardBorderWidth.max,
+			s.cardBorderWidth,
 		);
 	}
 
